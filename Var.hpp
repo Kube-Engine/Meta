@@ -18,7 +18,8 @@ class kF::Var
 public:
     enum class StorageType : std::uint8_t {
         Value,
-        Reference
+        Reference,
+        ConstReference
     };
 
     enum class Constness : bool {

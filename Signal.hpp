@@ -48,13 +48,13 @@ public:
     [[nodiscard]] const std::vector<HashedName> &arguments(void) const noexcept { return _desc->arguments; }
 
     template<typename Sender, typename Receiver, typename Functor>
-    [[nodiscard]] Connection connect(const Sender *sender, const Receiver *receiver, Functor &&functor, const ConnectionType connectionType = ConnectionType::Safe);
+    [[nodiscard]] Connection connect(const Sender *sender, const Receiver *receiver, Functor &&functor, const ConnectionType connectionType = ConnectionType::Safe) noexcept_ndebug;
 
     template<typename Sender, typename Functor>
-    [[nodiscard]] Connection connect(const Sender *sender, Functor &&functor, const ConnectionType connectionType = ConnectionType::Safe);
+    [[nodiscard]] Connection connect(const Sender *sender, Functor &&functor, const ConnectionType connectionType = ConnectionType::Safe) noexcept_ndebug;
 
     template<typename Sender, typename Receiver>
-    void disconnect(const Sender *sender, const Receiver *receiver);
+    void disconnect(const Sender *sender, const Receiver *receiver) noexcept;
 
     template<typename ...Args>
     void emit(const void *sender, Args &&...args);
@@ -67,7 +67,7 @@ struct kF::Meta::Slot
 {
     struct OpaqueFunctor
     {
-        using InvokeFunc = void(*)(Var &, const void *, Var *);
+        using InvokeFunc = bool(*)(Var &, const void *, Var *);
 
         std::thread::id threadId {};
         InvokeFunc invokeFunc { nullptr };
@@ -93,9 +93,19 @@ public:
         if (_signal)
             _signal.disconnect(_sender, _receiver);
     }
+
+    operator bool(void) const noexcept { return _signal; }
+
     Connection &operator=(Connection &&other) noexcept { swap(other); return *this; }
 
     void swap(Connection &other) noexcept { std::swap(_signal, other._signal); std::swap(_sender, other._sender); std::swap(_receiver, other._receiver); }
+
+    void disconnect(void) noexcept {
+        _signal.disconnect(_sender, _receiver);
+        _signal = Signal();
+        _sender = nullptr;
+        _receiver = nullptr;
+    }
 
 private:
     Signal _signal { nullptr };

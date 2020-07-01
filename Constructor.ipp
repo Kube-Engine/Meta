@@ -8,7 +8,7 @@ kF::Meta::Constructor::Descriptor kF::Meta::Constructor::Descriptor::Construct(v
 {
     static_assert(sizeof...(Args) > 0);
 
-    constexpr auto dispatch =  [](void *instance, Args &&...args) {
+    constexpr auto dispatch = [](void *instance, Args &&...args) {
         new (instance) Type { std::forward<Args>(args)... };
     };
 

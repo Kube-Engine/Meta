@@ -20,23 +20,14 @@ kF::Meta::Signal::Descriptor kF::Meta::Signal::Descriptor::Construct(const Hashe
 }
 
 template<typename Receiver, typename Functor, typename Decomposer>
-kF::Meta::Slot::OpaqueFunctor kF::Meta::Slot::OpaqueFunctor::Construct(const Receiver *receiver, Functor &&functor, const ConnectionType connectionType)
+kF::Meta::Slot::OpaqueFunctor kF::Meta::Slot::OpaqueFunctor::Construct(const Receiver *receiver, Functor &&functor, const ConnectionType connectionType) noexcept_ndebug
 {
     return OpaqueFunctor {
         .threadId = std::this_thread::get_id(),
-        .invokeFunc = [](Var &data, const void *receiver, Var *args) {
+        .invokeFunc = [](Var &data, const void *receiver, Var *args) -> bool {
             using FunctorType = std::remove_cvref_t<Functor>;
 
-            // constexpr bool IsMetaCall = std::is_same_v<typename Decomposer::ArgsTuple, std::tuple<Var *>>;
-
-            auto &func = data.as<FunctorType>();
-            if constexpr (false) {
-                if constexpr (Decomposer::IsFunctor)
-                    func(args);
-                else
-                    (*func)(args);
-            } else
-                Internal::Invoke<Receiver, Decomposer, Functor>(func, receiver, args, Decomposer::IndexSequence);
+            return Internal::Invoke<Receiver, Decomposer, Functor>(data.as<FunctorType>(), receiver, args, Decomposer::IndexSequence).operator bool();
         },
         .data = std::forward<Functor>(functor),
         .connectionType = connectionType
@@ -44,9 +35,12 @@ kF::Meta::Slot::OpaqueFunctor kF::Meta::Slot::OpaqueFunctor::Construct(const Rec
 }
 
 template<typename Sender, typename Receiver, typename Functor>
-kF::Meta::Connection kF::Meta::Signal::connect(const Sender *sender, const Receiver *receiver, Functor &&functor, const ConnectionType connectionType)
+kF::Meta::Connection kF::Meta::Signal::connect(const Sender *sender, const Receiver *receiver, Functor &&functor, const ConnectionType connectionType) noexcept_ndebug
 {
     using Decomposer = Internal::FunctionDecomposerHelper<std::remove_cvref_t<Functor>>;
+
+    kFAssert(argsCount() == std::tuple_size_v<typename Decomposer::ArgsTuple>,
+        throw std::runtime_error("Meta::Signal::connect: Invalid number of arguments of slot"));
 
     auto lock = std::lock_guard(_desc->slotsMutex);
 
@@ -62,13 +56,13 @@ kF::Meta::Connection kF::Meta::Signal::connect(const Sender *sender, const Recei
 }
 
 template<typename Sender, typename Functor>
-kF::Meta::Connection kF::Meta::Signal::connect(const Sender *sender, Functor &&functor, const ConnectionType connectionType)
+kF::Meta::Connection kF::Meta::Signal::connect(const Sender *sender, Functor &&functor, const ConnectionType connectionType) noexcept_ndebug
 {
     return connect(sender, static_cast<const void *>(nullptr), std::forward<Functor>(functor), connectionType);
 }
 
 template<typename Sender, typename Receiver>
-void kF::Meta::Signal::disconnect(const Sender *sender, const Receiver *receiver)
+void kF::Meta::Signal::disconnect(const Sender *sender, const Receiver *receiver) noexcept
 {
     auto lock = std::lock_guard(_desc->slotsMutex);
     auto it = std::find_if(_desc->slots.begin(), _desc->slots.end(), [sender, receiver](const auto &slot) {
@@ -89,6 +83,7 @@ void kF::Meta::Signal::emit(const void *sender, Args &&...args)
     auto lock = std::shared_lock(_desc->slotsMutex);
     for (auto &slot : _desc->slots) {
         if (sender == slot.sender)
-            slot.opaqueFunctor->invokeFunc(slot.opaqueFunctor->data, slot.receiver, arguments);
+            if (!slot.opaqueFunctor->invokeFunc(slot.opaqueFunctor->data, slot.receiver, arguments))
+                throw std::runtime_error("Meta::Signal::emit: Invalid slot signature");
     }
 }

@@ -143,7 +143,7 @@ void kF::Meta::Type::invokeOperator(void *data, const Var &rhs) const
 template<auto SignalPtr>
 kF::Meta::Signal kF::Meta::Type::findSignal(void) const noexcept
 {
-    constexpr auto signalPtr = Internal::GetFunctionIdentifier<SignalPtr>();
+    const auto signalPtr = Internal::GetFunctionIdentifier<SignalPtr>();
 
     for (const auto &signal : _desc->signals)
         if (signal.signalPtr() == signalPtr)
