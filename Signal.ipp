@@ -77,13 +77,29 @@ template<typename ...Args>
 void kF::Meta::Signal::emit(const void *sender, Args &&...args)
 {
     kFAssert(sizeof...(Args) == argsCount(),
-        throw std::runtime_error("Meta::Signal::emit: Invalid parameters, given " + std::to_string(sizeof...(Args))
-                            + " but expected " + std::to_string(argsCount()) + " argument(s)"));
+        throw std::runtime_error("Meta::Signal::emit: Invalid parameters, given " + std::to_string(sizeof...(Args)) + " but expected " + std::to_string(argsCount()) + " argument(s)"));
     Var arguments[] { Var::Assign(std::forward<Args>(args))... };
+    std::shared_ptr<Var[]> sharedArguments;
+    const auto threadId = std::this_thread::get_id();
     auto lock = std::shared_lock(_desc->slotsMutex);
     for (auto &slot : _desc->slots) {
-        if (sender == slot.sender)
+        if (sender != slot.sender)
+            continue;
+        if (threadId == slot.opaqueFunctor->threadId) {
             if (!slot.opaqueFunctor->invokeFunc(slot.opaqueFunctor->data, slot.receiver, arguments))
                 throw std::runtime_error("Meta::Signal::emit: Invalid slot signature");
+            continue;
+        }
+        if (!sharedArguments) {
+            sharedArguments = std::make_unique<Var[]>(sizeof...(Args));
+            for (auto *ptr = sharedArguments.get(); const auto &arg : arguments) {
+                *ptr = arg;
+                ++ptr;
+            }
+        }
+        if (auto holder = _DelayedSlotMap.find(slot.opaqueFunctor->threadId); holder)
+            holder.value().emplace_back(slot, sharedArguments);
+        else
+            _DelayedSlotMap.insert(slot.opaqueFunctor->threadId, std::vector<DelayedSlot> { DelayedSlot(slot, sharedArguments) });
     }
 }

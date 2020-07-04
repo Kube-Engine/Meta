@@ -22,6 +22,7 @@ set(KubeMetaSources
     ${KubeMetaDir}/Resolver.cpp
     ${KubeMetaDir}/Signal.hpp
     ${KubeMetaDir}/Signal.ipp
+    ${KubeMetaDir}/Signal.cpp
     ${KubeMetaDir}/Type.hpp
     ${KubeMetaDir}/Type.ipp
     ${KubeMetaDir}/Type.cpp

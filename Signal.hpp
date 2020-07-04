@@ -8,7 +8,8 @@
 #include <shared_mutex>
 #include <functional>
 #include <thread>
-#include <parallel_hashmap/phmap.h>
+
+#include <Kube/Core/SafeAccessTable.hpp>
 
 #include "Var.hpp"
 
@@ -31,7 +32,9 @@ public:
         static Descriptor Construct(const HashedName name, std::vector<HashedName> &&names) noexcept_ndebug;
     };
 
-    // using DelayedSlotMap = phmap::parallel_flat_hash_map<std::thread::id, std::vector
+    using DelayedSlotMap = SafeAccessTable<std::thread::id, std::vector<DelayedSlot>>;
+
+    static void ProcessDelayedSlots(void);
 
     Signal(Descriptor *desc = nullptr) noexcept : _desc(desc) {}
     Signal(const Signal &other) noexcept = default;
@@ -60,6 +63,8 @@ public:
     void emit(const void *sender, Args &&...args);
 
 private:
+    static DelayedSlotMap _DelayedSlotMap;
+
     Descriptor *_desc = nullptr;
 };
 
@@ -75,12 +80,19 @@ struct kF::Meta::Slot
         ConnectionType connectionType { ConnectionType::Safe };
 
         template<typename Receiver, typename Functor, typename Decomposer>
-        static OpaqueFunctor Construct(const Receiver *receiver, Functor &&functor, const Meta::ConnectionType connectionType);
+        static OpaqueFunctor Construct(const Receiver *receiver, Functor &&functor, const Meta::ConnectionType connectionType) noexcept_ndebug;
     };
 
     const void *sender { nullptr };
     const void *receiver { nullptr };
     std::shared_ptr<OpaqueFunctor> opaqueFunctor {};
+};
+
+struct kF::Meta::DelayedSlot : public Slot
+{
+    DelayedSlot(const Slot &slot = Slot(), const std::shared_ptr<Var[]> &arguments_ = std::shared_ptr<Var[]>()) : Slot(slot), arguments(arguments_) {}
+
+    std::shared_ptr<Var[]> arguments {};
 };
 
 class kF::Meta::Connection

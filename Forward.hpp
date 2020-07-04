@@ -18,6 +18,7 @@ namespace kF
         class Data;
         class Signal;
         class Slot;
+        class DelayedSlot;
         class Connection;
 
         template<typename Type>
