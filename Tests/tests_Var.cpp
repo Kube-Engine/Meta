@@ -44,7 +44,7 @@ TEST(Var, CopyAssignBasics)
     Var var;
 
     var.assign(42);
-    ASSERT_EQ(var.storageType(), Var::StorageType::Value);
+    ASSERT_EQ(var.storageType(), Var::StorageType::ValueTrivial);
     ASSERT_EQ(var.as<int>(), 42);
 
     var.assign(std::string("abc"));
@@ -63,25 +63,25 @@ TEST(Var, RefAssignBasics)
 
     int a = 42;
     var.assign(a);
-    ASSERT_EQ(var.storageType(), Var::StorageType::Reference);
+    ASSERT_EQ(var.storageType(), Var::StorageType::ReferenceVolatile);
     ASSERT_EQ(++var.as<int>(), 43);
     ASSERT_EQ(a, 43);
 
     std::string b = "abc";
     var.assign(b);
-    ASSERT_EQ(var.storageType(), Var::StorageType::Reference);
+    ASSERT_EQ(var.storageType(), Var::StorageType::ReferenceVolatile);
     ASSERT_EQ(var.as<std::string>().append("de"), "abcde");
     ASSERT_EQ(b, "abcde");
 
     const auto &aRef = a;
     var.assign(aRef);
-    ASSERT_EQ(var.storageType(), Var::StorageType::Reference);
+    ASSERT_EQ(var.storageType(), Var::StorageType::ReferenceConstant);
     ASSERT_EQ(++var.as<int>(), 44);
     ASSERT_EQ(a, 44);
 
     const auto &bRef = b;
     var.assign(bRef);
-    ASSERT_EQ(var.storageType(), Var::StorageType::Reference);
+    ASSERT_EQ(var.storageType(), Var::StorageType::ReferenceConstant);
     ASSERT_EQ(var.as<std::string>().append("fgh"), "abcdefgh");
     ASSERT_EQ(b, "abcdefgh");
 }

@@ -17,14 +17,11 @@ class kF::Var
 {
 public:
     enum class StorageType : std::uint8_t {
+        Undefined,
         Value,
-        Reference,
-        ConstReference
-    };
-
-    enum class Constness : bool {
-        Volatile,
-        Constant
+        ValueTrivial,
+        ReferenceVolatile,
+        ReferenceConstant
     };
 
     /** @brief Assigns a type value to a Var */
@@ -53,7 +50,7 @@ public:
     Var(Type &&value) { emplace<std::remove_cvref_t<Type>, false>(std::forward<Type>(value)); }
 
     /** @brief If not empty, will destruct the internal value */
-    ~Var(void) { release(); }
+    ~Var(void) { destruct<false>(); }
 
     /** @brief Copy assignment, deep copy ! */
     Var &operator=(const Var &other) noexcept { deepCopy<true>(other); return *this; }
@@ -64,14 +61,11 @@ public:
     /** @brief Checks if the instance is not empty */
     [[nodiscard]] explicit operator bool(void) const noexcept { return _type.operator bool(); }
 
-    /** @brief Release internal type */
-    void release(void);
-
     /** @brief Swap instances */
     void swap(Var &other) noexcept;
 
     /** @brief Assigns a variable internally */
-    template<typename Type, bool ReleaseInstance = true>
+    template<typename Type, bool DestructInstance = true>
     void assign(Type &&other);
 
     /** @brief Deep copy another variable */
@@ -79,12 +73,16 @@ public:
     void deepCopy(const Var &other);
 
     /** @brief Emplaces a type into the current instance */
-    template<typename Type, bool ReleaseInstance = true, typename ...Args>
+    template<typename Type, bool DestructInstance = true, typename ...Args>
     void emplace(Args &&...args);
 
     /** @brief Construct semantic */
     template<typename ...Args>
     void construct(const HashedName name, Args &&...args);
+
+    /** @brief Release internal type */
+    template<bool ResetMembers = true>
+    void destruct(void);
 
     /** @brief Get internal type */
     [[nodiscard]] Meta::Type type(void) const noexcept { return _type; }
@@ -93,10 +91,10 @@ public:
     [[nodiscard]] StorageType storageType(void) const noexcept { return _storageType; }
 
     /** @brief Get internal constness */
-    [[nodiscard]] Constness constness(void) const noexcept { return _constness; }
+    [[nodiscard]] bool isConstant(void) const noexcept { return _storageType == StorageType::ReferenceConstant; }
 
     /** @brief Fast check of 'type().isTrivial() && storageType == StorageType::Value' */
-    [[nodiscard]] bool isTrivialValue(void) const noexcept { return _isTrivialValue; }
+    [[nodiscard]] bool isTrivialValue(void) const noexcept { return _storageType == StorageType::ValueTrivial; }
 
     /** @brief Retreive opaque internal data */
     void *data(void) noexcept { return isTrivialValue() ? &_data : _data; }
@@ -168,7 +166,5 @@ public:
 private:
     void *_data { nullptr };
     Meta::Type _type {};
-    StorageType _storageType;
-    Constness _constness;
-    bool _isTrivialValue;
+    StorageType _storageType { StorageType::Undefined };
 };

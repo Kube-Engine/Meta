@@ -7,25 +7,11 @@
 
 using namespace kF;
 
-void Var::release(void)
-{
-    if (!_type || _storageType != Var::StorageType::Value)
-        return;
-    if (type().isTrivial())
-        _type.destruct(&_data);
-    else {
-        _type.destruct(_data);
-        std::free(_data);
-    }
-}
-
 void Var::swap(Var &other) noexcept
 {
     std::swap(_data, other._data);
     std::swap(_type, other._type);
     std::swap(_storageType, other._storageType);
-    std::swap(_constness, other._constness);
-    std::swap(_isTrivialValue, other._isTrivialValue);
 }
 
 Var Var::convert(const Meta::Type type) const

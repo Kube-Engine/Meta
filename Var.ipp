@@ -3,7 +3,7 @@
  * @ Description: Variable
  */
 
-template<typename Type, bool ReleaseInstance>
+template<typename Type, bool DestructInstance>
 void kF::Var::assign(Type &&other)
 {
     using DirectType = decltype(other);
@@ -11,8 +11,8 @@ void kF::Var::assign(Type &&other)
 
     constexpr bool IsConst = std::is_const_v<std::remove_reference_t<DirectType>>;
 
-    if constexpr (ReleaseInstance)
-        release();
+    if constexpr (DestructInstance)
+        destruct<false>();
     if constexpr (std::is_same_v<FlatType, Var>) {
         if constexpr (!std::is_lvalue_reference_v<DirectType>)
             return swap(other);
@@ -30,9 +30,7 @@ void kF::Var::assign(Type &&other)
             _data = &other;
         _type = Meta::Factory<FlatType>::Resolve();
     }
-    _storageType = Var::StorageType::Reference;
-    _constness = static_cast<Var::Constness>(IsConst);
-    _isTrivialValue = false;
+    _storageType = ConstexprTernary(IsConst, StorageType::ReferenceConstant, StorageType::ReferenceVolatile);
 }
 
 template<bool CheckIfAssignable>
@@ -46,9 +44,7 @@ void kF::Var::deepCopy(const Var &other)
                 throw std::runtime_error("Var::deepCopy: Copy assignment is not supported"));
             other.type().copyAssign(data(), const_cast<void *>(other.data()));
             _type = other.type();
-            _storageType = StorageType::Value;
-            _constness = Constness::Volatile;
-            _isTrivialValue = type().typeSize() <= Meta::Internal::TrivialTypeSizeLimit;
+            _storageType = type().isTrivial() ? StorageType::ValueTrivial : StorageType::Value;
             return;
         }
     kFAssert(other._type.isCopyAssignable(),
@@ -56,27 +52,24 @@ void kF::Var::deepCopy(const Var &other)
     *this = other.type().copyConstruct(const_cast<void *>(other.data()));
 }
 
-template<typename UnarrangedType, bool ReleaseInstance, typename ...Args>
+template<typename UnarrangedType, bool DestructInstance, typename ...Args>
 void kF::Var::emplace(Args &&...args)
 {
     using Type = typename Meta::Internal::ArrangeType<UnarrangedType>::Type;
 
-    if constexpr (ReleaseInstance)
-        release();
+    if constexpr (DestructInstance)
+        destruct<false>();
     _type = Meta::Factory<Type>::Resolve();
     if constexpr (std::is_same_v<Type, void>) {
-        _storageType = StorageType::Reference;
-        _constness = Var::Constness::Constant;
+        _storageType = StorageType::Undefined;
         _data = nullptr;
-        _isTrivialValue = false;
+    } else if constexpr (Meta::Internal::IsTrivial<Type>) {
+        _storageType = StorageType::ValueTrivial;
+        new (&_data) Type(std::forward<Args>(args)...);
     } else {
         _storageType = StorageType::Value;
-        _constness = Var::Constness::Volatile;
-        _isTrivialValue = Meta::Internal::IsTrivial<Type>;
-        if constexpr (Meta::Internal::IsTrivial<Type>)
-            new (&_data) Type(std::forward<Args>(args)...);
-        else
-            _data = new Type(std::forward<Args>(args)...);
+        _data = std::malloc(sizeof(Type));
+        new (_data) Type(std::forward<Args>(args)...);
     }
 }
 
@@ -87,6 +80,7 @@ void kF::Var::construct(const HashedName name, Args &&...args)
 
     kFAssert(type,
         throw std::runtime_error("Var::construct: Unknown type name"));
+    _storageType = type.isTrivial() ? StorageType::ValueTrivial : StorageType::Value;
     if constexpr (sizeof...(Args) == 0) {
         kFAssert(type.isDefaultConstructible(),
             throw std::runtime_error("Var::construct: Given type is not default constructible"));
@@ -103,6 +97,29 @@ void kF::Var::construct(const HashedName name, Args &&...args)
         }
     } else // Constructor detector
         throw std::runtime_error("Custom constructors not handled now");
+}
+
+template<bool ResetMembers>
+void kF::Var::destruct(void)
+{
+    if (!_type)
+        return;
+    switch (_storageType) {
+    case StorageType::Value:
+        _type.destruct(_data);
+        std::free(_data);
+        break;
+    case StorageType::ValueTrivial:
+        _type.destruct(&_data);
+        break;
+    default:
+        break;
+    }
+    if constexpr (ResetMembers) {
+        _data = nullptr;
+        _type = Meta::Type();
+        _storageType = StorageType::Undefined;
+    }
 }
 
 template<typename Type>
@@ -154,10 +171,10 @@ Type kF::Var::directConvert(void) const
 void kF::Var::reserve(const Meta::Type type) noexcept_ndebug
 {
     _type = type;
-    _storageType = StorageType::Value;
-    _constness = Var::Constness::Volatile;
-    _isTrivialValue = type.isTrivial();
-    if (!_isTrivialValue) {
+    if (type.isTrivial())
+        _storageType = StorageType::ValueTrivial;
+    else {
+        _storageType = StorageType::Value;
         _data = std::malloc(type.typeSize());
         kFAssert(_data != nullptr,
             throw std::runtime_error("Var::reserve: Memory exhausted"));

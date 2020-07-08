@@ -94,7 +94,7 @@ TEST(Type, MetaSemantics)
     ASSERT_FALSE(fact.toBool(copy.data()));
     ASSERT_TRUE(fact.toBool(move.data()));
 
-    fact.destruct(move.data());
+    move.destruct();
     ASSERT_EQ(foo.use_count(), 1);
 
     ASSERT_FALSE(fact.hasOperator<Meta::UnaryOperator::Minus>());
@@ -110,7 +110,7 @@ TEST(Type, MetaSemantics)
     ASSERT_FALSE(fact.hasOperator<Meta::AssignmentOperator::Modulo>());
 }
 
-TEST(Type, Operator)
-{
+// TEST(Type, Operator)
+// {
 
-}
+// }

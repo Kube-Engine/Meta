@@ -30,7 +30,7 @@ static void ConnectDisconnect(benchmark::State &state)
         benchmark::DoNotOptimize(sig.connect(&foo, [] {}));
     }
 }
-BENCHMARK(ConnectDisconnect)->ThreadRange(1, 16);
+BENCHMARK(ConnectDisconnect);//->ThreadRange(1, 16);
 
 static void DirectCallNoArguments_Reference(benchmark::State &state)
 {
