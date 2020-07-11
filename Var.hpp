@@ -5,6 +5,8 @@
 
 #pragma once
 
+#include <cstring>
+
 #include "Type.hpp"
 
 /**
@@ -16,12 +18,24 @@
 class kF::Var
 {
 public:
+    /**
+     * @brief Describes how the internal instance is stored
+     *
+     * Value and ValueTrivial are for copied or moved instances
+     * ReferenceVolatile and ReferenceConstant are for assigned references
+     */
     enum class StorageType : std::uint8_t {
         Undefined,
         Value,
         ValueTrivial,
         ReferenceVolatile,
         ReferenceConstant
+    };
+
+    /** @brief Small optimisation of Var instance */
+    union Cache {
+        void *ptr;
+        std::uint8_t memory[Meta::Internal::TrivialTypeSizeLimit];
     };
 
     /** @brief Assigns a type value to a Var */
@@ -43,7 +57,7 @@ public:
     Var(const Var &other) { deepCopy<false>(other); }
 
     /** @brief Move constructor */
-    Var(Var &&other) noexcept { swap(other); }
+    inline Var(Var &&other) noexcept;
 
     /** @brief Emplace constructor */
     template<typename Type, std::enable_if_t<!std::is_same_v<std::remove_cvref_t<Type>, Var>>* = nullptr>
@@ -56,13 +70,10 @@ public:
     Var &operator=(const Var &other) noexcept { deepCopy<true>(other); return *this; }
 
     /** @brief Move assignment */
-    Var &operator=(Var &&other) noexcept { swap(other); return *this; }
+    inline Var &operator=(Var &&other) noexcept;
 
     /** @brief Checks if the instance is not empty */
     [[nodiscard]] explicit operator bool(void) const noexcept { return _type.operator bool(); }
-
-    /** @brief Swap instances */
-    void swap(Var &other) noexcept;
 
     /** @brief Assigns a variable internally */
     template<typename Type, bool DestructInstance = true>
@@ -74,7 +85,7 @@ public:
 
     /** @brief Emplaces a type into the current instance */
     template<typename Type, bool DestructInstance = true, typename ...Args>
-    void emplace(Args &&...args);
+    inline void emplace(Args &&...args);
 
     /** @brief Construct semantic */
     template<typename ...Args>
@@ -82,7 +93,7 @@ public:
 
     /** @brief Release internal type */
     template<bool ResetMembers = true>
-    void destruct(void);
+    inline void destruct(void);
 
     /** @brief Get internal type */
     [[nodiscard]] Meta::Type type(void) const noexcept { return _type; }
@@ -97,26 +108,25 @@ public:
     [[nodiscard]] bool isTrivialValue(void) const noexcept { return _storageType == StorageType::ValueTrivial; }
 
     /** @brief Retreive opaque internal data */
-    void *data(void) noexcept { return isTrivialValue() ? &_data : _data; }
-    const void *data(void) const noexcept { return isTrivialValue() ? &_data : _data; }
+    [[nodiscard]] void *data(void) const noexcept { return isTrivialValue() ? unsafeData<true>() : unsafeData<false>(); }
 
     /** @brief Retreive internal type as given Type reference (unsafe) */
     template<typename Type>
-    Type &as(void) noexcept { return *reinterpret_cast<Type *>(data()); }
+    [[nodiscard]] Type &as(void) noexcept { return *reinterpret_cast<Type *>(data()); }
     template<typename Type>
-    const Type &as(void) const noexcept { return *reinterpret_cast<const Type *>(data()); }
+    [[nodiscard]] const Type &as(void) const noexcept { return *reinterpret_cast<const Type *>(data()); }
 
     /** @brief Tries to cast internal to himself or base type (If impossible, will throw in debug or crash in release */
     template<typename Type>
-    [[nodiscard]] Type &cast(void) noexcept_ndebug;
+    [[nodiscard]] inline Type &cast(void) noexcept_ndebug;
     template<typename Type>
-    [[nodiscard]] const Type &cast(void) const noexcept_ndebug;
+    [[nodiscard]] inline const Type &cast(void) const noexcept_ndebug;
 
     /** @brief Tries to cast internal to himself or base type (If impossible, will return nullptr */
     template<typename Type>
-    [[nodiscard]] Type *tryCast(void) noexcept;
+    [[nodiscard]] inline Type *tryCast(void) noexcept;
     template<typename Type>
-    [[nodiscard]] const Type *tryCast(void) const noexcept;
+    [[nodiscard]] inline const Type *tryCast(void) const noexcept;
 
     /** @brief Check if internal is castable to given type */
     template<typename Type>
@@ -161,10 +171,29 @@ public:
      * This function makes access to the instance unsafe
      * You must construct the type manually before trying to use the instance
      */
+    void reserve(const Meta::Type type) noexcept_ndebug;
+
+    /**
+     * @brief Same as 'reserve' but with compile time knowledge of type triviallity
+     */
+    template<bool IsTrivial>
     inline void reserve(const Meta::Type type) noexcept_ndebug;
 
 private:
-    void *_data { nullptr };
+public:
+    Cache _data;
     Meta::Type _type {};
     StorageType _storageType { StorageType::Undefined };
+
+    /** @brief Unsafe getter used internally */
+    template<bool IsTrivial>
+    [[nodiscard]] void *unsafeData(void) const noexcept {
+        if constexpr (IsTrivial)
+            return const_cast<void *>(reinterpret_cast<const void *>(&_data.memory));
+        else
+            return const_cast<void *>(_data.ptr);
+    }
+
+    /** @brief Unsafe reference getter used internally */
+    [[nodiscard]] void *&dataRef(void) noexcept { return _data.ptr; }
 };

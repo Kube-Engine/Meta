@@ -41,6 +41,7 @@ public:
     Signal &operator=(const Signal &other) = default;
     [[nodiscard]] operator bool(void) const noexcept { return _desc; }
     [[nodiscard]] bool operator==(const Signal &other) const noexcept { return _desc == other._desc; }
+    [[nodiscard]] bool operator!=(const Signal &other) const noexcept { return _desc != other._desc; }
 
     [[nodiscard]] Internal::OpaqueFunction signalPtr(void) const noexcept { return _desc->signalPtr; }
 

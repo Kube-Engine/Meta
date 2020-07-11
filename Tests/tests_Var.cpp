@@ -39,8 +39,10 @@ TEST(Var, NonTrivialEmplace)
     ASSERT_EQ(var.as<std::string>(), "abc");
 }
 
-TEST(Var, CopyAssignBasics)
+TEST(Var, ValueAssignBasics)
 {
+    using Array = std::array<int, Meta::Internal::TrivialTypeSizeLimit * 2>;
+
     Var var;
 
     var.assign(42);
@@ -48,13 +50,16 @@ TEST(Var, CopyAssignBasics)
     ASSERT_EQ(var.as<int>(), 42);
 
     var.assign(std::string("abc"));
-    ASSERT_EQ(var.storageType(), Var::StorageType::Value);
+    ASSERT_EQ(var.storageType(), Var::StorageType::ValueTrivial);
     ASSERT_EQ(var.as<std::string>(), "abc");
 
-    std::string tmp = "def";
-    var.assign(std::string(std::move(tmp)));
+    var.assign(std::vector<int> { 42 });
+    ASSERT_EQ(var.storageType(), Var::StorageType::ValueTrivial);
+    ASSERT_EQ(var.as<std::vector<int>>()[0], 42);
+
+    var.assign(Array { 42 });
     ASSERT_EQ(var.storageType(), Var::StorageType::Value);
-    ASSERT_EQ(var.as<std::string>(), "def");
+    ASSERT_EQ(var.as<Array>()[0], 42);
 }
 
 TEST(Var, RefAssignBasics)
@@ -140,7 +145,9 @@ TEST(Var, ConversionBasics)
     tmp = var.convert<float>();
     ASSERT_EQ(tmp.as<float>(), 42.0f);
     tmp = var.convert<std::string>();
-    ASSERT_EQ(tmp.as<std::string>(), "42");
+    // auto &str = tmp.as<std::string>();
+    auto *str = reinterpret_cast<std::string *>(tmp._data.memory);
+    ASSERT_EQ(*str, "42");
 }
 
 TEST(Var, BinaryOperators)

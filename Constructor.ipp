@@ -29,9 +29,15 @@ kF::Var kF::Meta::Constructor::invoke(Args &&...args) const
 {
     Var var;
 
-    var.reserve(type());
-    if (!invoke(var.data(), std::forward<Args>(args)...))
-        return Var();
+    if (type().isTrivial()) {
+        var.reserve<true>(type());
+        if (!invoke(var.unsafeData<true>(), std::forward<Args>(args)...))
+            return Var();
+    } else {
+        var.reserve<false>(type());
+        if (!invoke(var.unsafeData<false>(), std::forward<Args>(args)...))
+            return Var();
+    }
     return var;
 }
 

@@ -7,13 +7,6 @@
 
 using namespace kF;
 
-void Var::swap(Var &other) noexcept
-{
-    std::swap(_data, other._data);
-    std::swap(_type, other._type);
-    std::swap(_storageType, other._storageType);
-}
-
 Var Var::convert(const Meta::Type type) const
 {
     if (auto conv = _type.findConverter(type); conv)
@@ -103,3 +96,10 @@ Var &Var::operator%=(const Var &rhs)
     return *this;
 }
 
+void kF::Var::reserve(const Meta::Type type) noexcept_ndebug
+{
+    if (type.isTrivial())
+        reserve<true>(type);
+    else
+        reserve<false>(type);
+}

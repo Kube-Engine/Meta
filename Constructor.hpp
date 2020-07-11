@@ -38,6 +38,7 @@ public:
 
     /** @brief Compare operator */
     [[nodiscard]] bool operator==(const Constructor &other) const noexcept { return _desc == other._desc; }
+    [[nodiscard]] bool operator!=(const Constructor &other) const noexcept { return _desc != other._desc; }
 
     /** @brief Retreive arguments count */
     [[nodiscard]] std::uint8_t argsCount(void) const noexcept { return _desc->argsCount; }

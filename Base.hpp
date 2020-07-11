@@ -147,7 +147,7 @@ namespace kF
             template<auto FunctionPtr>
             [[nodiscard]] OpaqueFunction GetFunctionIdentifier(void) noexcept { return FunctionIdentifier<FunctionPtr>::Get(); }
 
-            constexpr auto TrivialTypeSizeLimit = sizeof(void *);
+            constexpr auto TrivialTypeSizeLimit = sizeof(std::string);
 
             /** @brief Helper to know if a type is trivial or not */
             template<typename Type>
@@ -163,15 +163,15 @@ namespace kF
 
             /** Helpers used to generate opaque default, copy and move constructor functions */
             template<typename Type>
-            Var MakeDefaultConstructor(void);
+            void MakeDefaultConstructor(void *instance);
             template<typename Type>
-            Var MakeCopyConstructor(void *data);
+            void MakeCopyConstructor(void *instance, const void *data);
             template<typename Type>
-            Var MakeMoveConstructor(void *data);
+            void MakeMoveConstructor(void *instance, void *data);
 
             /** @brief Helpers used to generate opaque assignment functions */
             template<typename Type>
-            void MakeCopyAssignment(void *instance, void *data);
+            void MakeCopyAssignment(void *instance, const void *data);
             template<typename Type>
             void MakeMoveAssignment(void *instance, void *data);
 

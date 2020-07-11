@@ -26,3 +26,20 @@ static void ConstructInt(benchmark::State &state)
     }
 }
 BENCHMARK(ConstructInt)->Arg(42);
+
+static void ConstructStringReference(benchmark::State &state)
+{
+    for (auto _ : state) {
+        benchmark::DoNotOptimize(std::string("0123456789ABCDEFGHIJ"));
+    }
+}
+BENCHMARK(ConstructStringReference);
+
+
+static void ConstructString(benchmark::State &state)
+{
+    for (auto _ : state) {
+        benchmark::DoNotOptimize(Var { std::string("0123456789ABCDEFGHIJ") });
+    }
+}
+BENCHMARK(ConstructString);

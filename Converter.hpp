@@ -40,6 +40,7 @@ public:
 
     /** @brief Compare operator */
     [[nodiscard]] bool operator==(const Converter &other) const noexcept { return _desc == other._desc; }
+    [[nodiscard]] bool operator!=(const Converter &other) const noexcept { return _desc != other._desc; }
 
     /** @brief Get target converter type */
     [[nodiscard]] Type convertType(void) const noexcept { return _desc->convertType; }

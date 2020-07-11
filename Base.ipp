@@ -3,7 +3,6 @@
  * @ Description: Meta Base
  */
 
-
 template<typename Return, typename ...Args>
 kF::Meta::Type kF::Meta::Internal::FunctionDecomposer<Return(Args...)>::ArgType(const std::size_t index) noexcept
 {
@@ -13,25 +12,25 @@ kF::Meta::Type kF::Meta::Internal::FunctionDecomposer<Return(Args...)>::ArgType(
 }
 
 template<typename Type>
-kF::Var kF::Meta::Internal::MakeDefaultConstructor(void)
+void kF::Meta::Internal::MakeDefaultConstructor(void *instance)
 {
-    return Var::Emplace<Type>();
+    new (instance) Type {};
 }
 
 template<typename Type>
-kF::Var kF::Meta::Internal::MakeCopyConstructor(void *data)
+void kF::Meta::Internal::MakeCopyConstructor(void *instance, const void *data)
 {
-    return Var::Emplace<Type>(*reinterpret_cast<const Type *>(data));
+    new (instance) Type { *reinterpret_cast<const Type *>(data) };
 }
 
 template<typename Type>
-kF::Var kF::Meta::Internal::MakeMoveConstructor(void *data)
+void kF::Meta::Internal::MakeMoveConstructor(void *instance, void *data)
 {
-    return Var::Emplace<Type>(std::move(*reinterpret_cast<Type *>(data)));
+    new (instance) Type { std::move(*reinterpret_cast<Type *>(data)) };
 }
 
 template<typename Type>
-void kF::Meta::Internal::MakeCopyAssignment(void *instance, void *data)
+void kF::Meta::Internal::MakeCopyAssignment(void *instance, const void *data)
 {
     *reinterpret_cast<Type *>(instance) = *reinterpret_cast<const Type *>(data);
 }

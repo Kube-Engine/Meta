@@ -16,10 +16,10 @@ class kF::Meta::Type
 {
 public:
     using TypeID = std::type_index;
-    using DefaultConstructorFunc = Var(*)(void);
-    using CopyConstructorFunc = Var(*)(void *);
-    using MoveConstructorFunc = Var(*)(void *);
-    using CopyAssignmentFunc = void(*)(void *, void *);
+    using DefaultConstructorFunc = void(*)(void *);
+    using CopyConstructorFunc = void(*)(void *, const void *);
+    using MoveConstructorFunc = void(*)(void *, void *);
+    using CopyAssignmentFunc = void(*)(void *, const void *);
     using MoveAssignmentFunc = void(*)(void *, void *);
     using DestructorFunc = void(*)(void *);
     using UnaryOperatorFunc = Var(*)(const void *);
@@ -66,47 +66,86 @@ public:
         static Descriptor Construct(void) noexcept;
     };
 
+    /** @brief Construct passing a descriptor instance */
     Type(Descriptor *desc = nullptr) noexcept : _desc(desc) {}
+
+    /** @brief Copy constructor */
     Type(const Type &other) noexcept = default;
+
+    /** @brief Copy assignment */
     Type &operator=(const Type &other) = default;
+
+    /** @brief Fast valid check */
     [[nodiscard]] operator bool(void) const noexcept { return _desc; }
+
+    /** @brief Compare operator */
     [[nodiscard]] bool operator==(const Type &other) const noexcept { return _desc == other._desc; }
     [[nodiscard]] bool operator!=(const Type &other) const noexcept { return _desc != other._desc; }
 
+    /** @brief Retreive type's ID */
     [[nodiscard]] TypeID typeID(void) const noexcept { return _desc->typeID; }
 
+    /** @brief Retreive type's name */
     [[nodiscard]] HashedName name(void) const noexcept { return _desc->name; }
 
+    /** @brief Retreive type' size */
     [[nodiscard]] std::size_t typeSize(void) const noexcept { return _desc->typeSize; }
 
+    /** @brief Check if type is optimized */
     [[nodiscard]] bool isTrivial(void) const noexcept { return _desc->isTrivial; }
 
+    /** @brief Check if type is void */
     [[nodiscard]] bool isVoid(void) const noexcept { return _desc->isVoid; }
 
+    /** @brief Check if type is an intergral one */
     [[nodiscard]] bool isIntegral(void) const noexcept { return _desc->isIntegral; }
 
+    /** @brief Check if type is a floating one */
     [[nodiscard]] bool isFloating(void) const noexcept { return _desc->isFloating; }
 
+    /** @brief Check if type is double */
     [[nodiscard]] bool isDouble(void) const noexcept { return _desc->isDouble; }
 
+    /** @brief Check if type is default constructible */
     [[nodiscard]] bool isDefaultConstructible(void) const noexcept { return _desc->defaultConstructFunc; }
+
+    /** @brief Default construct the underlying type */
+    void defaultConstruct(void *instance) const { (*_desc->defaultConstructFunc)(instance); }
     [[nodiscard]] Var defaultConstruct(void) const;
 
+    /** @brief Check if type is copy constructible */
     [[nodiscard]] bool isCopyConstructible(void) const noexcept { return _desc->copyConstructFunc; }
-    [[nodiscard]] Var copyConstruct(void *data) const;
 
+    /** @brief Copy construct the underlying type */
+    void copyConstruct(void *instance, const void *data) const { (*_desc->copyConstructFunc)(instance, data); }
+    [[nodiscard]] Var copyConstruct(const void *data) const;
+
+    /** @brief Check if type is move constructible */
     [[nodiscard]] bool isMoveConstructible(void) const noexcept { return _desc->moveConstructFunc; }
+
+    /** @brief Move construct the underlying type */
+    void moveConstruct(void *instance, void *data) const { (*_desc->moveConstructFunc)(instance, data); }
     [[nodiscard]] Var moveConstruct(void *data) const;
 
+    /** @brief Check if type is copy assignable */
     [[nodiscard]] bool isCopyAssignable(void) const noexcept { return _desc->copyAssignmentFunc; }
+
+    /** @brief Copy assign the underlying type */
     void copyAssign(void *instance, void *data) const { (*_desc->copyAssignmentFunc)(instance, data); }
 
+    /** @brief Check if type is move assignable */
     [[nodiscard]] bool isMoveAssignable(void) const noexcept { return _desc->moveAssignmentFunc; }
+
+    /** @brief Move assign the underlying type */
     void moveAssign(void *instance, void *data) const { (*_desc->moveAssignmentFunc)(instance, data); }
 
+    /** @brief Check if type is convertible to boolean */
     [[nodiscard]] bool isBoolConvertible(void) const noexcept { return _desc->toBoolFunc; }
+
+    /** @brief Convert to boolean the underlying type */
     [[nodiscard]] bool toBool(const void *instance) const { return (*_desc->toBoolFunc)(instance); }
 
+    /** @brief Destruct the underlying type */
     void destruct(void *data) const { (*_desc->destructFunc)(data); }
 
     /** @brief Check the existence of  a meta given Unary / Binary / Assigment operator */

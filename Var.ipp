@@ -3,6 +3,32 @@
  * @ Description: Variable
  */
 
+kF::Var::Var(Var &&other) noexcept
+{
+    if (other.isTrivialValue()) {
+        reserve<true>(other.type());
+        other.type().moveConstruct(unsafeData<true>(), other.unsafeData<true>());
+    } else {
+        std::swap(_type, other._type);
+        std::swap(_storageType, other._storageType);
+        std::swap(other.dataRef(), dataRef());
+    }
+}
+
+kF::Var &kF::Var::operator=(Var &&other) noexcept
+{
+    if (other.isTrivialValue()) {
+        destruct<true>();
+        reserve<true>(other.type());
+        other.type().moveConstruct(unsafeData<true>(), other.unsafeData<true>());
+    } else {
+        std::swap(_type, other._type);
+        std::swap(_storageType, other._storageType);
+        std::swap(other.dataRef(), dataRef());
+    }
+    return *this;
+}
+
 template<typename Type, bool DestructInstance>
 void kF::Var::assign(Type &&other)
 {
@@ -15,19 +41,19 @@ void kF::Var::assign(Type &&other)
         destruct<false>();
     if constexpr (std::is_same_v<FlatType, Var>) {
         if constexpr (!std::is_lvalue_reference_v<DirectType>)
-            return swap(other);
+            *this = std::move(other);
         else if constexpr (IsConst)
-            _data = const_cast<void *>(other.data());
+            dataRef() = const_cast<void *>(other.data());
         else
-            _data = other.data();
+            dataRef() = other.data();
         _type = other._type;
     } else if constexpr (!std::is_lvalue_reference_v<DirectType>)
         return emplace<FlatType, false>(std::move(other));
     else {
         if constexpr (IsConst)
-            _data = const_cast<void *>(reinterpret_cast<const void *>(&other));
+            dataRef() = const_cast<void *>(reinterpret_cast<const void *>(&other));
         else
-            _data = &other;
+            dataRef() = reinterpret_cast<void *>(&other);
         _type = Meta::Factory<FlatType>::Resolve();
     }
     _storageType = ConstexprTernary(IsConst, StorageType::ReferenceConstant, StorageType::ReferenceVolatile);
@@ -62,14 +88,13 @@ void kF::Var::emplace(Args &&...args)
     _type = Meta::Factory<Type>::Resolve();
     if constexpr (std::is_same_v<Type, void>) {
         _storageType = StorageType::Undefined;
-        _data = nullptr;
     } else if constexpr (Meta::Internal::IsTrivial<Type>) {
         _storageType = StorageType::ValueTrivial;
-        new (&_data) Type(std::forward<Args>(args)...);
+        new (unsafeData<true>()) Type(std::forward<Args>(args)...);
     } else {
         _storageType = StorageType::Value;
-        _data = std::malloc(sizeof(Type));
-        new (_data) Type(std::forward<Args>(args)...);
+        dataRef() = std::malloc(sizeof(Type));
+        new (unsafeData<false>()) Type(std::forward<Args>(args)...);
     }
 }
 
@@ -80,20 +105,27 @@ void kF::Var::construct(const HashedName name, Args &&...args)
 
     kFAssert(type,
         throw std::runtime_error("Var::construct: Unknown type name"));
-    _storageType = type.isTrivial() ? StorageType::ValueTrivial : StorageType::Value;
+    void *ptr;
+    if (type.isTrivial()) {
+        reserve<true>(type);
+        ptr = unsafeData<true>();
+    } else {
+        reserve<false>(type);
+        ptr = unsafeData<false>();
+    }
     if constexpr (sizeof...(Args) == 0) {
-        kFAssert(type.isDefaultConstructible(),
+        kFAssert(_type.isDefaultConstructible(),
             throw std::runtime_error("Var::construct: Given type is not default constructible"));
-        *this = type.defaultConstruct();
-    } else if constexpr (sizeof...(Args) == 1 && (type.typeID() == typeid(std::tuple_element_t<0, std::tuple<Args...>>))) {
+        _type.defaultConstruct(ptr);
+    } else if (sizeof...(Args) == 1 && (_type.typeID() == typeid(std::tuple_element_t<0, std::tuple<Args...>>))) {
         if constexpr (std::is_lvalue_reference_v<std::tuple_element_t<0, std::tuple<Args...>>>) {
-            kFAssert(type.isCopyConstructible(),
+            kFAssert(_type.isCopyConstructible(),
                 throw std::runtime_error("Var::construct: Given type is not copy constructible"));
-            *this = type.copyConstruct(&args...);
+            _type.copyConstruct(ptr, &args...);
         } else {
-            kFAssert(type.isMoveConstructible(),
+            kFAssert(_type.isMoveConstructible(),
                 throw std::runtime_error("Var::construct: Given type is not move constructible"));
-            *this = type.moveConstruct(&args...);
+            _type.moveConstruct(ptr, &args...);
         }
     } else // Constructor detector
         throw std::runtime_error("Custom constructors not handled now");
@@ -106,17 +138,16 @@ void kF::Var::destruct(void)
         return;
     switch (_storageType) {
     case StorageType::Value:
-        _type.destruct(_data);
-        std::free(_data);
+        _type.destruct(unsafeData<false>());
+        std::free(unsafeData<false>());
         break;
     case StorageType::ValueTrivial:
-        _type.destruct(&_data);
+        _type.destruct(unsafeData<true>());
         break;
     default:
         break;
     }
     if constexpr (ResetMembers) {
-        _data = nullptr;
         _type = Meta::Type();
         _storageType = StorageType::Undefined;
     }
@@ -168,15 +199,16 @@ Type kF::Var::directConvert(void) const
     return std::move(res.as<Type>());
 }
 
+template<bool IsTrivial>
 void kF::Var::reserve(const Meta::Type type) noexcept_ndebug
 {
     _type = type;
-    if (type.isTrivial())
+    if constexpr (IsTrivial)
         _storageType = StorageType::ValueTrivial;
     else {
         _storageType = StorageType::Value;
-        _data = std::malloc(type.typeSize());
-        kFAssert(_data != nullptr,
+        dataRef() = std::malloc(_type.typeSize());
+        kFAssert(unsafeData<false>() != nullptr,
             throw std::runtime_error("Var::reserve: Memory exhausted"));
     }
 }

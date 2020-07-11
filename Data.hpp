@@ -44,6 +44,7 @@ public:
 
     /** @brief Compare operator */
     [[nodiscard]] bool operator==(const Data &other) const noexcept { return _desc == other._desc; }
+    [[nodiscard]] bool operator!=(const Data &other) const noexcept { return _desc != other._desc; }
 
     /** @brief Get data's hashed name */
     [[nodiscard]] HashedName name(void) const noexcept { return _desc->name; }
