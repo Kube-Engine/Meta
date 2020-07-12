@@ -28,14 +28,15 @@ template<typename ...Args>
 kF::Var kF::Meta::Constructor::invoke(Args &&...args) const
 {
     Var var;
+    auto returnType = type();
 
-    if (type().isTrivial()) {
-        var.reserve<true>(type());
-        if (!invoke(var.unsafeData<true>(), std::forward<Args>(args)...))
+    if (returnType.isTrivial()) {
+        var.reserve<true>(returnType);
+        if (!invoke(var.data<true>(), std::forward<Args>(args)...))
             return Var();
     } else {
-        var.reserve<false>(type());
-        if (!invoke(var.unsafeData<false>(), std::forward<Args>(args)...))
+        var.reserve<false>(returnType);
+        if (!invoke(var.data<false>(), std::forward<Args>(args)...))
             return Var();
     }
     return var;

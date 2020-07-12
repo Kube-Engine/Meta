@@ -5,16 +5,23 @@
 
 #pragma once
 
-#include <shared_mutex>
 #include <functional>
-#include <thread>
-
-#include <Kube/Core/SafeAccessTable.hpp>
+#include <memory>
 
 #include "Var.hpp"
 
+namespace kF::Meta
+{
+    struct OpaqueFunctor;
+    struct Slot;
+    class Connection;
+}
+
 /**
  * @brief Signal is used to store meta-data about a free / member / static function
+ *
+ * Each signal is attached to a class. Signal aren't thread safe.
+ * However, each class is separated from others: you can use two classes' signals on two different threads
  */
 class kF::Meta::Signal
 {
@@ -26,102 +33,125 @@ public:
         const std::vector<HashedName> arguments {};
         std::vector<Slot> slots {};
         std::vector<std::size_t> freeSlots {};
-        std::shared_mutex slotsMutex {};
 
         template<auto SignalPtr>
         static Descriptor Construct(const HashedName name, std::vector<HashedName> &&names) noexcept_ndebug;
     };
 
-    using DelayedSlotMap = SafeAccessTable<std::thread::id, std::vector<DelayedSlot>>;
-
-    static void ProcessDelayedSlots(void);
-
+    /** @brief Construct passing a descriptor instance */
     Signal(Descriptor *desc = nullptr) noexcept : _desc(desc) {}
+
+    /** @brief Copy constructor */
     Signal(const Signal &other) noexcept = default;
+
+    /** @brief Copy assignment */
     Signal &operator=(const Signal &other) = default;
+
+    /** @brief Fast valid check */
     [[nodiscard]] operator bool(void) const noexcept { return _desc; }
+
+    /** @brief Compare operator */
     [[nodiscard]] bool operator==(const Signal &other) const noexcept { return _desc == other._desc; }
     [[nodiscard]] bool operator!=(const Signal &other) const noexcept { return _desc != other._desc; }
 
+    /** @brief Retreive signal's pointer */
     [[nodiscard]] Internal::OpaqueFunction signalPtr(void) const noexcept { return _desc->signalPtr; }
 
+    /** @brief Retreive signal's name */
     [[nodiscard]] HashedName name(void) const noexcept { return _desc->name; }
 
+    /** @brief Retreive signal's argument count */
     [[nodiscard]] std::size_t argsCount(void) const noexcept { return _desc->arguments.size(); }
 
+    /** @brief Retreive signal's arguments */
     [[nodiscard]] const std::vector<HashedName> &arguments(void) const noexcept { return _desc->arguments; }
 
+    /** @brief Connect a member slot to signal */
     template<typename Sender, typename Receiver, typename Functor>
-    [[nodiscard]] Connection connect(const Sender *sender, const Receiver *receiver, Functor &&functor, const ConnectionType connectionType = ConnectionType::Safe) noexcept_ndebug;
+    [[nodiscard]] Connection connect(const Sender *sender, const Receiver *receiver, Functor &&functor) noexcept_ndebug;
 
+    /** @brief Connect non-member slot to signal */
     template<typename Sender, typename Functor>
-    [[nodiscard]] Connection connect(const Sender *sender, Functor &&functor, const ConnectionType connectionType = ConnectionType::Safe) noexcept_ndebug;
+    [[nodiscard]] Connection connect(const Sender *sender, Functor &&functor) noexcept_ndebug;
 
-    template<typename Sender, typename Receiver>
-    void disconnect(const Sender *sender, const Receiver *receiver) noexcept;
+    /** @brief Emit a signal, calling each connected slots */
+    template<typename Sender, typename ...Args>
+    void emit(const Sender *sender, Args &&...args);
 
-    template<typename ...Args>
-    void emit(const void *sender, Args &&...args);
+public:
+    /**
+     * @brief Disconnect a slot though its opaque functor
+     *
+     * This function should only be used by Connection class
+     */
+    inline void disconnect(const OpaqueFunctor *opaqueFunctor) noexcept;
 
 private:
-    static DelayedSlotMap _DelayedSlotMap;
-
     Descriptor *_desc = nullptr;
 };
 
+struct kF::Meta::OpaqueFunctor
+{
+    using InvokeFunc = bool(*)(Var &, const void *, Var *);
+
+    const void *receiver { nullptr };
+    InvokeFunc invokeFunc { nullptr };
+    Var data {};
+
+    /** @brief Constructs the opaque functor of a slot */
+    template<typename Receiver, typename Functor, typename Decomposer>
+    static OpaqueFunctor Construct(const Receiver *receiver, Functor &&functor) noexcept_ndebug;
+};
+
+/**
+ * @brief Slot describes how a signal's callback should be called
+ */
 struct kF::Meta::Slot
 {
-    struct OpaqueFunctor
-    {
-        using InvokeFunc = bool(*)(Var &, const void *, Var *);
-
-        std::thread::id threadId {};
-        InvokeFunc invokeFunc { nullptr };
-        Var data {};
-        ConnectionType connectionType { ConnectionType::Safe };
-
-        template<typename Receiver, typename Functor, typename Decomposer>
-        static OpaqueFunctor Construct(const Receiver *receiver, Functor &&functor, const Meta::ConnectionType connectionType) noexcept_ndebug;
-    };
-
     const void *sender { nullptr };
-    const void *receiver { nullptr };
-    std::shared_ptr<OpaqueFunctor> opaqueFunctor {};
+    std::unique_ptr<OpaqueFunctor> opaqueFunctor {};
 };
 
-struct kF::Meta::DelayedSlot : public Slot
-{
-    DelayedSlot(const Slot &slot = Slot(), const std::shared_ptr<Var[]> &arguments_ = std::shared_ptr<Var[]>()) : Slot(slot), arguments(arguments_) {}
-
-    std::shared_ptr<Var[]> arguments {};
-};
-
+/**
+ * @brief Connection store an active slot. When destroy, it will release the slot
+ */
 class kF::Meta::Connection
 {
 public:
+    /** @brief Construct an empty connection */
     Connection(void) noexcept = default;
-    Connection(const Signal signal, const void *sender, const void *receiver) noexcept : _signal(signal), _sender(sender), _receiver(receiver) {}
+
+    /** @brief Construct an empty connection */
+    Connection(const Signal signal, const void *sender, const OpaqueFunctor *opaqueFunctor) noexcept : _signal(signal), _sender(sender), _opaqueFunctor(opaqueFunctor) {}
+
+    /** @brief Construct an empty connection */
     Connection(Connection &&other) noexcept { swap(other); }
+
+    /** @brief Destroy and release a connection */
     ~Connection(void) noexcept {
         if (_signal)
-            _signal.disconnect(_sender, _receiver);
+            _signal.disconnect(_opaqueFunctor);
     }
 
+    /** @brief Fast valid check */
     operator bool(void) const noexcept { return _signal; }
 
+    /** @brief Move assignment */
     Connection &operator=(Connection &&other) noexcept { swap(other); return *this; }
 
-    void swap(Connection &other) noexcept { std::swap(_signal, other._signal); std::swap(_sender, other._sender); std::swap(_receiver, other._receiver); }
+    /** @brief Swap two connections */
+    void swap(Connection &other) noexcept { std::swap(_signal, other._signal); std::swap(_sender, other._sender); std::swap(_opaqueFunctor, other._opaqueFunctor); }
 
+    /** @brief Disconnect underlying signal (will not check if empty) */
     void disconnect(void) noexcept {
-        _signal.disconnect(_sender, _receiver);
+        _signal.disconnect(_opaqueFunctor);
         _signal = Signal();
         _sender = nullptr;
-        _receiver = nullptr;
+        _opaqueFunctor = nullptr;
     }
 
 private:
     Signal _signal { nullptr };
     const void *_sender { nullptr };
-    const void *_receiver { nullptr };
+    const OpaqueFunctor *_opaqueFunctor { nullptr };
 };

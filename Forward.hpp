@@ -17,9 +17,6 @@ namespace kF
         class Function;
         class Data;
         class Signal;
-        class Slot;
-        class DelayedSlot;
-        class Connection;
 
         template<typename Type>
         class Factory;

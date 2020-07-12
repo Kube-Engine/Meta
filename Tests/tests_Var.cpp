@@ -145,9 +145,7 @@ TEST(Var, ConversionBasics)
     tmp = var.convert<float>();
     ASSERT_EQ(tmp.as<float>(), 42.0f);
     tmp = var.convert<std::string>();
-    // auto &str = tmp.as<std::string>();
-    auto *str = reinterpret_cast<std::string *>(tmp._data.memory);
-    ASSERT_EQ(*str, "42");
+    ASSERT_EQ(tmp.as<std::string>(), "42");
 }
 
 TEST(Var, BinaryOperators)

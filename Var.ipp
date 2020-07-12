@@ -7,7 +7,7 @@ kF::Var::Var(Var &&other) noexcept
 {
     if (other.isTrivialValue()) {
         reserve<true>(other.type());
-        other.type().moveConstruct(unsafeData<true>(), other.unsafeData<true>());
+        other.type().moveConstruct(data<true>(), other.data<true>());
     } else {
         std::swap(_type, other._type);
         std::swap(_storageType, other._storageType);
@@ -20,7 +20,7 @@ kF::Var &kF::Var::operator=(Var &&other) noexcept
     if (other.isTrivialValue()) {
         destruct<true>();
         reserve<true>(other.type());
-        other.type().moveConstruct(unsafeData<true>(), other.unsafeData<true>());
+        other.type().moveConstruct(data<true>(), other.data<true>());
     } else {
         std::swap(_type, other._type);
         std::swap(_storageType, other._storageType);
@@ -90,11 +90,11 @@ void kF::Var::emplace(Args &&...args)
         _storageType = StorageType::Undefined;
     } else if constexpr (Meta::Internal::IsTrivial<Type>) {
         _storageType = StorageType::ValueTrivial;
-        new (unsafeData<true>()) Type(std::forward<Args>(args)...);
+        new (data<true>()) Type(std::forward<Args>(args)...);
     } else {
         _storageType = StorageType::Value;
         dataRef() = std::malloc(sizeof(Type));
-        new (unsafeData<false>()) Type(std::forward<Args>(args)...);
+        new (data<false>()) Type(std::forward<Args>(args)...);
     }
 }
 
@@ -108,10 +108,10 @@ void kF::Var::construct(const HashedName name, Args &&...args)
     void *ptr;
     if (type.isTrivial()) {
         reserve<true>(type);
-        ptr = unsafeData<true>();
+        ptr = data<true>();
     } else {
         reserve<false>(type);
-        ptr = unsafeData<false>();
+        ptr = data<false>();
     }
     if constexpr (sizeof...(Args) == 0) {
         kFAssert(_type.isDefaultConstructible(),
@@ -138,11 +138,11 @@ void kF::Var::destruct(void)
         return;
     switch (_storageType) {
     case StorageType::Value:
-        _type.destruct(unsafeData<false>());
-        std::free(unsafeData<false>());
+        _type.destruct(data<false>());
+        std::free(data<false>());
         break;
     case StorageType::ValueTrivial:
-        _type.destruct(unsafeData<true>());
+        _type.destruct(data<true>());
         break;
     default:
         break;
@@ -208,7 +208,7 @@ void kF::Var::reserve(const Meta::Type type) noexcept_ndebug
     else {
         _storageType = StorageType::Value;
         dataRef() = std::malloc(_type.typeSize());
-        kFAssert(unsafeData<false>() != nullptr,
+        kFAssert(data<false>() != nullptr,
             throw std::runtime_error("Var::reserve: Memory exhausted"));
     }
 }

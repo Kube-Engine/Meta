@@ -108,7 +108,16 @@ public:
     [[nodiscard]] bool isTrivialValue(void) const noexcept { return _storageType == StorageType::ValueTrivial; }
 
     /** @brief Retreive opaque internal data */
-    [[nodiscard]] void *data(void) const noexcept { return isTrivialValue() ? unsafeData<true>() : unsafeData<false>(); }
+    [[nodiscard]] void *data(void) const noexcept { return isTrivialValue() ? data<true>() : data<false>(); }
+
+    /** @brief Retreive opaque internal data knowing triviality at compile time */
+    template<bool IsTrivial>
+    [[nodiscard]] void *data(void) const noexcept {
+        if constexpr (IsTrivial)
+            return const_cast<void *>(reinterpret_cast<const void *>(&_data.memory));
+        else
+            return const_cast<void *>(_data.ptr);
+    }
 
     /** @brief Retreive internal type as given Type reference (unsafe) */
     template<typename Type>
@@ -180,19 +189,9 @@ public:
     inline void reserve(const Meta::Type type) noexcept_ndebug;
 
 private:
-public:
-    Cache _data;
     Meta::Type _type {};
     StorageType _storageType { StorageType::Undefined };
-
-    /** @brief Unsafe getter used internally */
-    template<bool IsTrivial>
-    [[nodiscard]] void *unsafeData(void) const noexcept {
-        if constexpr (IsTrivial)
-            return const_cast<void *>(reinterpret_cast<const void *>(&_data.memory));
-        else
-            return const_cast<void *>(_data.ptr);
-    }
+    Cache _data;
 
     /** @brief Unsafe reference getter used internally */
     [[nodiscard]] void *&dataRef(void) noexcept { return _data.ptr; }

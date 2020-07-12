@@ -13,10 +13,10 @@ Var Meta::Type::defaultConstruct(void) const
 
     if (isTrivial()) {
         var.reserve<true>(*this);
-        defaultConstruct(var.unsafeData<true>());
+        defaultConstruct(var.data<true>());
     } else {
         var.reserve<false>(*this);
-        defaultConstruct(var.unsafeData<false>());
+        defaultConstruct(var.data<false>());
     }
     return var;
 }
@@ -27,10 +27,10 @@ Var Meta::Type::copyConstruct(const void *data) const
 
     if (isTrivial()) {
         var.reserve<true>(*this);
-        copyConstruct(var.unsafeData<true>(), data);
+        copyConstruct(var.data<true>(), data);
     } else {
         var.reserve<false>(*this);
-        copyConstruct(var.unsafeData<false>(), data);
+        copyConstruct(var.data<false>(), data);
     }
     return var;
 }
@@ -41,10 +41,10 @@ Var Meta::Type::moveConstruct(void *data) const
 
     if (isTrivial()) {
         var.reserve<true>(*this);
-        moveConstruct(var.unsafeData<true>(), data);
+        moveConstruct(var.data<true>(), data);
     } else {
         var.reserve<false>(*this);
-        moveConstruct(var.unsafeData<false>(), data);
+        moveConstruct(var.data<false>(), data);
     }
     return var;
 }

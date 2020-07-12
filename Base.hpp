@@ -24,14 +24,6 @@ namespace kF
 {
     namespace Meta
     {
-        /** @brief Types of slot connection */
-        enum class ConnectionType {
-            Safe,
-            Direct,
-            Unique,
-            UniqueDirect
-        };
-
         /** @brief Unary meta operators */
         enum class UnaryOperator {
             Minus,
