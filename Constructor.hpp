@@ -15,7 +15,7 @@ public:
 
     struct Descriptor
     {
-        const std::uint8_t argsCount;
+        const std::size_t argsCount;
         const ArgTypeFunc argTypeFunc;
         const Type type;
         const InvokeFunc invokeFunc;
@@ -41,7 +41,7 @@ public:
     [[nodiscard]] bool operator!=(const Constructor &other) const noexcept { return _desc != other._desc; }
 
     /** @brief Retreive arguments count */
-    [[nodiscard]] std::uint8_t argsCount(void) const noexcept { return _desc->argsCount; }
+    [[nodiscard]] std::size_t argsCount(void) const noexcept { return _desc->argsCount; }
 
     /** @brief Retreive an argument type */
     [[nodiscard]] Type argType(const std::size_t index) const noexcept { return _desc->argTypeFunc(index); }

@@ -101,7 +101,7 @@ void kF::Var::emplace(Args &&...args)
 template<typename ...Args>
 void kF::Var::construct(const HashedName name, Args &&...args)
 {
-    auto type = Meta::Resolver::FindTypeByName(name);
+    auto type = Meta::Resolver::FindType(name);
 
     kFAssert(type,
         throw std::runtime_error("Var::construct: Unknown type name"));

@@ -19,7 +19,7 @@ public:
     struct Descriptor
     {
         const HashedName name;
-        const std::uint8_t argsCount;
+        const std::size_t argsCount;
         const bool isStatic;
         const bool isConst;
         const Type returnType;
@@ -50,7 +50,7 @@ public:
     [[nodiscard]] HashedName name(void) const noexcept { return _desc->name; }
 
     /** @brief Retreive arguments count */
-    [[nodiscard]] std::uint8_t argsCount(void) const noexcept { return _desc->argsCount; }
+    [[nodiscard]] std::size_t argsCount(void) const noexcept { return _desc->argsCount; }
 
     /** @brief Retreive an argument type */
     [[nodiscard]] Type argType(const std::size_t index) const noexcept { return _desc->argTypeFunc(index); }

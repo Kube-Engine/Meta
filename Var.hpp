@@ -24,7 +24,7 @@ public:
      * Value and ValueTrivial are for copied or moved instances
      * ReferenceVolatile and ReferenceConstant are for assigned references
      */
-    enum class StorageType : std::uint8_t {
+    enum class StorageType : std::size_t {
         Undefined,
         Value,
         ValueTrivial,

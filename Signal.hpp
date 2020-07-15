@@ -30,7 +30,7 @@ public:
     {
         const Internal::OpaqueFunction signalPtr { nullptr };
         const HashedName name { 0 };
-        const std::uint32_t argsCount { 0 };
+        const std::size_t argsCount { 0 };
         std::vector<Slot> slots {};
         std::vector<std::size_t> freeSlots {};
 
@@ -87,6 +87,9 @@ private:
     Descriptor *_desc = nullptr;
 };
 
+/**
+ * @brief OpaqueFunctor stores a callback (either pointer of functor)
+ */
 struct kF::Meta::OpaqueFunctor
 {
     using InvokeFunc = bool(*)(Var &, const void *, Var *);
