@@ -85,9 +85,9 @@ void kF::Meta::FactoryBase<Type>::RegisterData(const HashedName name) noexcept_n
 
 template<typename Type>
 template<auto SignalPtr>
-void kF::Meta::FactoryBase<Type>::RegisterSignal(const HashedName name, std::vector<HashedName> &&arguments) noexcept_ndebug
+void kF::Meta::FactoryBase<Type>::RegisterSignal(const HashedName name) noexcept_ndebug
 {
-    static auto descriptor { Signal::Descriptor::Construct<SignalPtr>(name, std::move(arguments)) };
+    static auto descriptor { Signal::Descriptor::Construct<SignalPtr>(name) };
 
     kFAssert(!Meta::Type(&GetDescriptor()).findSignal<SignalPtr>(),
         throw std::logic_error("Factory::RegisterSignal: Signal already registered"));

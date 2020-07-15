@@ -90,7 +90,7 @@ static void DirectCallIntFloatArguments(benchmark::State &state)
     Meta::Resolver::Clear();
     Meta::RegisterMetadata();
     Meta::Factory<Foo>::Register("foo"_hash);
-    Meta::Factory<Foo>::RegisterSignal<&Foo::signal>("signal"_hash, { "x"_hash, "y"_hash });
+    Meta::Factory<Foo>::RegisterSignal<&Foo::signal>("signal"_hash);
 
     auto sig = Meta::Factory<Foo>::Resolve().findSignal<&Foo::signal>();
     Foo foo;

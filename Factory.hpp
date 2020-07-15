@@ -51,7 +51,7 @@ public:
      * @param arguments Signal's hashed arguments names
      */
     template<auto SignalPtr>
-    static void RegisterSignal(const HashedName name, std::vector<HashedName> &&arguments = std::vector<HashedName>()) noexcept_ndebug;
+    static void RegisterSignal(const HashedName name) noexcept_ndebug;
 
     /** @brief Resolve the templated type's meta descriptor */
     [[nodiscard]] inline static Meta::Type Resolve(void) noexcept { return Meta::Type(&Factory<Type>::GetDescriptor()); }
@@ -87,7 +87,7 @@ public:
 
     /** @brief Alias of RegisterSignal function */
     template<auto SignalPtr>
-    FactoryBase &signal(const HashedName name, std::vector<HashedName> &&arguments = std::vector<HashedName>()) noexcept_ndebug { RegisterSignal<SignalPtr>(name, std::move(arguments)); return *this; }
+    FactoryBase &signal(const HashedName name) noexcept_ndebug { RegisterSignal<SignalPtr>(name); return *this; }
 
 private:
     /** @brief Static helper used to store the descriptor instance of the templated type */

@@ -121,9 +121,9 @@ public:
 
     /** @brief Retreive internal type as given Type reference (unsafe) */
     template<typename Type>
-    [[nodiscard]] Type &as(void) noexcept { return *reinterpret_cast<Type *>(data()); }
+    [[nodiscard]] Type &as(void) noexcept { return *reinterpret_cast<std::remove_cvref_t<Type> *>(data()); }
     template<typename Type>
-    [[nodiscard]] const Type &as(void) const noexcept { return *reinterpret_cast<const Type *>(data()); }
+    [[nodiscard]] const Type &as(void) const noexcept { return *reinterpret_cast<const std::remove_cvref_t<Type> *>(data()); }
 
     /** @brief Tries to cast internal to himself or base type (If impossible, will throw in debug or crash in release */
     template<typename Type>

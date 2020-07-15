@@ -30,12 +30,12 @@ public:
     {
         const Internal::OpaqueFunction signalPtr { nullptr };
         const HashedName name { 0 };
-        const std::vector<HashedName> arguments {};
+        const std::uint32_t argsCount { 0 };
         std::vector<Slot> slots {};
         std::vector<std::size_t> freeSlots {};
 
         template<auto SignalPtr>
-        static Descriptor Construct(const HashedName name, std::vector<HashedName> &&names) noexcept_ndebug;
+        static Descriptor Construct(const HashedName name) noexcept;
     };
 
     /** @brief Construct passing a descriptor instance */
@@ -61,22 +61,19 @@ public:
     [[nodiscard]] HashedName name(void) const noexcept { return _desc->name; }
 
     /** @brief Retreive signal's argument count */
-    [[nodiscard]] std::size_t argsCount(void) const noexcept { return _desc->arguments.size(); }
-
-    /** @brief Retreive signal's arguments */
-    [[nodiscard]] const std::vector<HashedName> &arguments(void) const noexcept { return _desc->arguments; }
+    [[nodiscard]] std::size_t argsCount(void) const noexcept { return _desc->argsCount; }
 
     /** @brief Connect a member slot to signal */
     template<typename Sender, typename Receiver, typename Functor>
-    [[nodiscard]] Connection connect(const Sender *sender, const Receiver *receiver, Functor &&functor) noexcept_ndebug;
+    [[nodiscard]] Connection connect(const Sender &sender, const Receiver &receiver, Functor &&functor) noexcept_ndebug;
 
     /** @brief Connect non-member slot to signal */
     template<typename Sender, typename Functor>
-    [[nodiscard]] Connection connect(const Sender *sender, Functor &&functor) noexcept_ndebug;
+    [[nodiscard]] inline Connection connect(const Sender &sender, Functor &&functor) noexcept_ndebug;
 
     /** @brief Emit a signal, calling each connected slots */
     template<typename Sender, typename ...Args>
-    void emit(const Sender *sender, Args &&...args);
+    void emit(const Sender &sender, Args &&...args);
 
 public:
     /**
@@ -100,7 +97,7 @@ struct kF::Meta::OpaqueFunctor
 
     /** @brief Constructs the opaque functor of a slot */
     template<typename Receiver, typename Functor, typename Decomposer>
-    static OpaqueFunctor Construct(const Receiver *receiver, Functor &&functor) noexcept_ndebug;
+    static OpaqueFunctor Construct(const void *receiver, Functor &&functor) noexcept;
 };
 
 /**
@@ -139,6 +136,9 @@ public:
     /** @brief Move assignment */
     Connection &operator=(Connection &&other) noexcept { swap(other); return *this; }
 
+    /** @brief Comparison operator */
+    [[nodiscard]] bool operator==(const Connection &other) { return _signal == other._signal && _sender == other._sender && _opaqueFunctor == other._opaqueFunctor; }
+
     /** @brief Swap two connections */
     void swap(Connection &other) noexcept { std::swap(_signal, other._signal); std::swap(_sender, other._sender); std::swap(_opaqueFunctor, other._opaqueFunctor); }
 
@@ -149,6 +149,15 @@ public:
         _sender = nullptr;
         _opaqueFunctor = nullptr;
     }
+
+    /** @brief Retreive connection's signal */
+    [[nodiscard]] const Signal signal(void) const noexcept { return _signal; }
+
+    /** @brief Retreive connection's sender */
+    [[nodiscard]] const void *sender(void) const noexcept { return _sender; }
+
+    /** @brief Retreive connection's opaque functor */
+    [[nodiscard]] const OpaqueFunctor *opaqueFunctor(void) const noexcept { return _opaqueFunctor; }
 
 private:
     Signal _signal { nullptr };

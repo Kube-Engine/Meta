@@ -52,7 +52,7 @@ TEST(Signal, MultipleParameters)
     Meta::Resolver::Clear();
     Meta::RegisterMetadata();
     Meta::Factory<Foo>::Register("foo"_hash);
-    Meta::Factory<Foo>::RegisterSignal<&Foo::signal>("signal"_hash, { "x"_hash, "y"_hash });
+    Meta::Factory<Foo>::RegisterSignal<&Foo::signal>("signal"_hash);
 
     int x = 0;
     float y = 0;
@@ -61,8 +61,6 @@ TEST(Signal, MultipleParameters)
     auto sig = type.findSignal<&Foo::signal>();
     ASSERT_EQ(sig, type.findSignal("signal"_hash));
     ASSERT_EQ(sig.argsCount(), 2);
-    ASSERT_EQ(sig.arguments()[0], "x"_hash);
-    ASSERT_EQ(sig.arguments()[1], "y"_hash);
 
     // Perfect slot signature
     auto conn = sig.connect(&foo, [&x, &y](int x_, float y_) {

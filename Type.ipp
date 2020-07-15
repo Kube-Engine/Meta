@@ -115,7 +115,6 @@ kF::Meta::Type::Descriptor kF::Meta::Type::Descriptor::Construct(void) noexcept
 #undef MakeOperatorIfPointerableAssignment
 }
 
-
 template<kF::Meta::UnaryOperator Operator>
 kF::Var kF::Meta::Type::invokeOperator(const void *data) const
 {
