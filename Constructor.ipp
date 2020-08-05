@@ -6,7 +6,7 @@
 template<typename Type, typename ...Args>
 kF::Meta::Constructor::Descriptor kF::Meta::Constructor::Descriptor::Construct(void) noexcept
 {
-    static_assert(sizeof...(Args) > 0);
+    static_assert(sizeof...(Args) > 0, "A meta custom constructor must have at least one argument");
 
     constexpr auto dispatch = [](void *instance, Args &&...args) {
         new (instance) Type { std::forward<Args>(args)... };

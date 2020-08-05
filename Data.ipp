@@ -11,7 +11,7 @@ kF::Meta::Data::Descriptor kF::Meta::Data::Descriptor::Construct(const HashedNam
     using SetFunctionType = decltype(SetFunctionPtr);
     using SetDecomposer = Internal::FunctionDecomposerHelper<SetFunctionType>;
 
-    static_assert(GetFunctionPtr != nullptr);
+    static_assert(GetFunctionPtr != nullptr, "A meta data must at least have a getter");
 
     return Descriptor {
         .name = name,

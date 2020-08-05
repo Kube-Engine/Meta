@@ -79,7 +79,7 @@ TEST(Data, TestName) \
     ASSERT_EQ(res.as<Type>(), startValue); \
     res = data.set(x, setValue); \
     ASSERT_TRUE(res); \
-    ASSERT_TRUE(res.type().isVoid()); \
+    ASSERT_TRUE(res.isVoid()); \
     res = data.get(x); \
     ASSERT_TRUE(res); \
     ASSERT_EQ(res.type().typeID(), Meta::Factory<Type>::Resolve().typeID()); \
@@ -104,7 +104,7 @@ TEST(Data, TestName) \
     ASSERT_EQ(res.as<Type>(), startValue); \
     res = data.set(setValue); \
     ASSERT_TRUE(res); \
-    ASSERT_TRUE(res.type().isVoid()); \
+    ASSERT_TRUE(res.isVoid()); \
     res = data.get(); \
     ASSERT_TRUE(res); \
     ASSERT_EQ(res.type().typeID(), Meta::Factory<Type>::Resolve().typeID()); \

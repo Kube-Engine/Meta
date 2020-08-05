@@ -276,6 +276,17 @@ namespace kF
 
                 using Type = std::remove_pointer_t<PointerType>;
             };
+
+            /** @brief Helper used to retreive a void pointer from a reference (either a reference to nullptr or a variable) */
+            template<typename Type>
+            static constexpr const void *RetreiveOpaquePtr(const Type &input) {
+                if constexpr (std::is_same_v<std::remove_cvref_t<Type>, std::nullptr_t>)
+                    return static_cast<const void *>(input);
+                else if constexpr (std::is_pointer_v<std::remove_cvref_t<Type>>)
+                    return static_cast<const void *>(input);
+                else
+                    return static_cast<const void *>(&input);
+            };
         }
     }
 }

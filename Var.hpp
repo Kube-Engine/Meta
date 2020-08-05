@@ -35,7 +35,7 @@ public:
     /** @brief Small optimisation of Var instance */
     union Cache {
         void *ptr;
-        std::uint8_t memory[Meta::Internal::TrivialTypeSizeLimit];
+        std::byte memory[Meta::Internal::TrivialTypeSizeLimit];
     };
 
     /** @brief Assigns a type value to a Var */
@@ -106,6 +106,9 @@ public:
 
     /** @brief Fast check of 'type().isTrivial() && storageType == StorageType::Value' */
     [[nodiscard]] bool isTrivialValue(void) const noexcept { return _storageType == StorageType::ValueTrivial; }
+
+    /** @brief Check if type is void */
+    [[nodiscard]] bool isVoid(void) const noexcept { return _type.isVoid(); }
 
     /** @brief Retreive opaque internal data */
     [[nodiscard]] void *data(void) const noexcept { return isTrivialValue() ? data<true>() : data<false>(); }

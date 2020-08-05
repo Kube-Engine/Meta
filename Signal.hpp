@@ -88,18 +88,18 @@ private:
 };
 
 /**
- * @brief OpaqueFunctor stores a callback (either pointer of functor)
+ * @brief OpaqueFunctor stores a callback (either pointer or functor)
  */
 struct kF::Meta::OpaqueFunctor
 {
-    using InvokeFunc = bool(*)(Var &, const void *, Var *);
+    using InvokeFunc = Var(*)(Var &data, const void *receiver, Var *arguments);
 
     const void *receiver { nullptr };
     InvokeFunc invokeFunc { nullptr };
     Var data {};
 
     /** @brief Constructs the opaque functor of a slot */
-    template<typename Receiver, typename Functor, typename Decomposer>
+    template<typename Receiver, typename Functor, typename Decomposer, bool AllowNullFunctor = false>
     static OpaqueFunctor Construct(const void *receiver, Functor &&functor) noexcept;
 };
 

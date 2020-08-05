@@ -15,18 +15,27 @@ kF::Meta::Signal::Descriptor kF::Meta::Signal::Descriptor::Construct(const Hashe
     };
 }
 
-template<typename Receiver, typename Functor, typename Decomposer>
+template<typename Receiver, typename Functor, typename Decomposer, bool AllowNullFunctor>
 kF::Meta::OpaqueFunctor kF::Meta::OpaqueFunctor::Construct(const void *receiver, Functor &&functor) noexcept
 {
-    return OpaqueFunctor {
-        receiver: reinterpret_cast<const void *>(receiver),
-        invokeFunc: [](Var &data, const void *receiver, Var *args) -> bool {
-            using FunctorType = std::remove_cvref_t<Functor>;
+    static_assert(AllowNullFunctor || !std::is_same_v<Decomposer, void>, "Invalid functor detected");
 
-            return Internal::Invoke<Receiver, Decomposer, Functor>(data.as<FunctorType>(), receiver, args, Decomposer::IndexSequence).operator bool();
-        },
-        data: std::forward<Functor>(functor)
-    };
+    if constexpr (AllowNullFunctor && std::is_same_v<Decomposer, void>)
+        return OpaqueFunctor {
+            receiver: receiver,
+            invokeFunc: nullptr,
+            data: Var::Emplace<void>()
+        };
+    else
+        return OpaqueFunctor {
+            receiver: receiver,
+            invokeFunc: [](Var &data, const void *receiver, Var *args) -> Var {
+                using FunctorType = std::remove_cvref_t<Functor>;
+
+                return Internal::Invoke<Receiver, Decomposer, Functor>(data.as<FunctorType>(), receiver, args, Decomposer::IndexSequence);
+            },
+            data: std::forward<Functor>(functor)
+        };
 }
 
 template<typename Sender, typename Receiver, typename Functor>
@@ -34,17 +43,8 @@ kF::Meta::Connection kF::Meta::Signal::connect(const Sender &sender, const Recei
 {
     using Decomposer = Internal::FunctionDecomposerHelper<std::remove_cvref_t<Functor>>;
 
-    constexpr auto getPtr = [](const auto &input) -> const void * {
-        if constexpr (std::is_same_v<std::remove_cvref_t<decltype(input)>, std::nullptr_t>)
-            return static_cast<const void *>(input);
-        else if constexpr (std::is_pointer_v<std::remove_cvref_t<decltype(input)>>)
-            return static_cast<const void *>(input);
-        else
-            return static_cast<const void *>(&input);
-    };
-
-    const void * const senderPtr = getPtr(sender);
-    const void * const receiverPtr = getPtr(receiver);
+    const void * const senderPtr = Internal::RetreiveOpaquePtr(sender);
+    const void * const receiverPtr = Internal::RetreiveOpaquePtr(receiver);
     const OpaqueFunctor *opaqueFunctor;
 
     kFAssert(argsCount() == std::tuple_size_v<typename Decomposer::ArgsTuple>,
@@ -73,16 +73,7 @@ kF::Meta::Connection kF::Meta::Signal::connect(const Sender &sender, Functor &&f
 template<typename Sender, typename ...Args>
 void kF::Meta::Signal::emit(const Sender &sender, Args &&...args)
 {
-    constexpr auto getPtr = [](const auto &input) -> const void * {
-        if constexpr (std::is_same_v<std::remove_cvref_t<decltype(input)>, std::nullptr_t>)
-            return static_cast<const void *>(input);
-        else if constexpr (std::is_pointer_v<std::remove_cvref_t<decltype(input)>>)
-            return static_cast<const void *>(input);
-        else
-            return static_cast<const void *>(&input);
-    };
-
-    const void * const senderPtr = getPtr(sender);
+    const void * const senderPtr = Internal::RetreiveOpaquePtr(sender);
 
     kFAssert(sizeof...(Args) == argsCount(),
         throw std::runtime_error("Meta::Signal::emit: Invalid parameters, given " + std::to_string(sizeof...(Args)) + " but expected " + std::to_string(argsCount()) + " argument(s)"));

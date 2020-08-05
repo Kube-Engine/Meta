@@ -36,7 +36,7 @@ template<typename Type>
 template<typename To, auto FunctionPtr>
 void kF::Meta::FactoryBase<Type>::RegisterConverter(void) noexcept_ndebug
 {
-    static_assert(!std::is_same_v<Type, To>);
+    static_assert(!std::is_same_v<Type, To>, "A meta converter must not convert a type to itself");
 
     constexpr bool IsCustom = [] {
         if constexpr (std::is_same_v<decltype(FunctionPtr), std::nullptr_t>)

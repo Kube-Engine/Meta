@@ -35,7 +35,7 @@ BENCHMARK(ConnectDisconnect);//->ThreadRange(1, 16);
 static void DirectCallNoArguments_Reference(benchmark::State &state)
 {
     int x = 0;
-    auto fct = [&x] {
+    std::function<int(void)> fct = [&x] {
         return ++x;
     };
     for (auto _ : state) {
