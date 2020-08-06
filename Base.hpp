@@ -139,7 +139,7 @@ namespace kF
             template<auto FunctionPtr>
             [[nodiscard]] OpaqueFunction GetFunctionIdentifier(void) noexcept { return FunctionIdentifier<FunctionPtr>::Get(); }
 
-            constexpr auto TrivialTypeSizeLimit = sizeof(std::string);
+            constexpr auto TrivialTypeSizeLimit = 32;
 
             /** @brief Helper to know if a type is trivial or not */
             template<typename Type>
