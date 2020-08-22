@@ -8,7 +8,7 @@ kF::Meta::Constructor::Descriptor kF::Meta::Constructor::Descriptor::Construct(v
 {
     static_assert(sizeof...(Args) > 0, "A meta custom constructor must have at least one argument");
 
-    constexpr auto dispatch = [](void *instance, Args &&...args) {
+    constexpr auto Dispatch = [](void *instance, Args &&...args) {
         new (instance) Type { std::forward<Args>(args)... };
     };
 
@@ -19,7 +19,7 @@ kF::Meta::Constructor::Descriptor kF::Meta::Constructor::Descriptor::Construct(v
         argTypeFunc: &Decomposer::ArgType,
         type: Factory<Type>::Resolve(),
         invokeFunc: [](void *instance, Var *args) -> bool {
-            return Internal::Invoke<Type, dispatch, Decomposer>(instance, args, Decomposer::IndexSequence).operator bool();
+            return Internal::Invoke<Type, Dispatch, Decomposer>(instance, args, Decomposer::IndexSequence).operator bool();
         }
     };
 }

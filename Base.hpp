@@ -14,11 +14,9 @@
 
 #include <Kube/Core/Hash.hpp>
 #include <Kube/Core/Assert.hpp>
+#include <Kube/Core/Utils.hpp>
 
 #include "Forward.hpp"
-
-/** @brief Compile-time ternary expression */
-#define ConstexprTernary(condition, body, elseBody) [] { if constexpr (condition) { return body; } else { return elseBody; } }()
 
 namespace kF
 {

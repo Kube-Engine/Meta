@@ -141,7 +141,7 @@ kF::Var kF::Meta::Internal::Invoke(const void *instance, Var *args, const std::i
 {
     using FunctionPtrType = decltype(FunctionPtr);
 
-    constexpr auto direct = [](Var *any, auto holder) {
+    constexpr auto Direct = [](Var *any, auto holder) {
         using ArgType = typename decltype(holder)::Type;
         using FlatArgType = std::remove_cvref_t<ArgType>;
 
@@ -167,7 +167,7 @@ kF::Var kF::Meta::Internal::Invoke(const void *instance, Var *args, const std::i
             return any->directConvert<FlatArgType>();
     };
 
-    constexpr auto dispatch = [](auto &&args) {
+    constexpr auto Dispatch = [](auto &&args) {
         if constexpr (std::is_same_v<typename Decomposer::ReturnType, void>) {
             std::apply(FunctionPtr, std::forward<decltype(args)>(args));
             return Var::Emplace<void>();
@@ -176,16 +176,16 @@ kF::Var kF::Meta::Internal::Invoke(const void *instance, Var *args, const std::i
     };
 
     if constexpr (Decomposer::IsFunctor || !Decomposer::IsMember)
-        return dispatch(
+        return Dispatch(
             std::forward_as_tuple(
-                direct(args + Indexes, TypeHolder<std::tuple_element_t<Indexes, typename Decomposer::ArgsTuple>>())...
+                Direct(args + Indexes, TypeHolder<std::tuple_element_t<Indexes, typename Decomposer::ArgsTuple>>())...
             )
         );
     else
-        return dispatch(
+        return Dispatch(
             std::forward_as_tuple(
                 const_cast<Type *>(reinterpret_cast<const Type *>(instance)),
-                direct(args + Indexes, TypeHolder<std::tuple_element_t<Indexes, typename Decomposer::ArgsTuple>>())...
+                Direct(args + Indexes, TypeHolder<std::tuple_element_t<Indexes, typename Decomposer::ArgsTuple>>())...
             )
         );
 }
@@ -193,7 +193,7 @@ kF::Var kF::Meta::Internal::Invoke(const void *instance, Var *args, const std::i
 template<typename Type, typename Decomposer, typename Functor, std::size_t ...Indexes>
 kF::Var kF::Meta::Internal::Invoke(Functor &functor, [[maybe_unused]] const void *instance, Var *args, const std::index_sequence<Indexes...> &sequence)
 {
-    constexpr auto direct = [](Var *any, auto holder) {
+    constexpr auto Direct = [](Var *any, auto holder) {
         using ArgType = typename decltype(holder)::Type;
         using FlatArgType = std::remove_cvref_t<ArgType>;
 
@@ -219,7 +219,7 @@ kF::Var kF::Meta::Internal::Invoke(Functor &functor, [[maybe_unused]] const void
             return any->directConvert<FlatArgType>();
     };
 
-    constexpr auto dispatch = [](auto &&functor, auto &&args) {
+    constexpr auto Dispatch = [](auto &&functor, auto &&args) {
         if constexpr (std::is_same_v<typename Decomposer::ReturnType, void>) {
             std::apply(functor, std::forward<decltype(args)>(args));
             return Var::Emplace<void>();
@@ -228,18 +228,18 @@ kF::Var kF::Meta::Internal::Invoke(Functor &functor, [[maybe_unused]] const void
     };
 
     if constexpr (Decomposer::IsFunctor || !Decomposer::IsMember)
-        return dispatch(
+        return Dispatch(
             std::forward<Functor>(functor),
             std::forward_as_tuple(
-                direct(args + Indexes, TypeHolder<std::tuple_element_t<Indexes, typename Decomposer::ArgsTuple>>())...
+                Direct(args + Indexes, TypeHolder<std::tuple_element_t<Indexes, typename Decomposer::ArgsTuple>>())...
             )
         );
     else
-        return dispatch(
+        return Dispatch(
             std::forward<Functor>(functor),
             std::forward_as_tuple(
                 const_cast<Type *>(reinterpret_cast<const Type *>(instance)),
-                direct(args + Indexes, TypeHolder<std::tuple_element_t<Indexes, typename Decomposer::ArgsTuple>>())...
+                Direct(args + Indexes, TypeHolder<std::tuple_element_t<Indexes, typename Decomposer::ArgsTuple>>())...
             )
         );
 }
