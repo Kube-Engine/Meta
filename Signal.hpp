@@ -69,7 +69,7 @@ public:
 
     /** @brief Connect non-member slot to signal */
     template<typename Sender, typename Functor>
-    [[nodiscard]] inline Connection connect(const Sender &sender, Functor &&functor) noexcept_ndebug;
+    [[nodiscard]] Connection connect(const Sender &sender, Functor &&functor) noexcept_ndebug;
 
     /** @brief Emit a signal, calling each connected slots */
     template<typename Sender, typename ...Args>
@@ -81,7 +81,7 @@ public:
      *
      * This function should only be used by Connection class
      */
-    inline void disconnect(const OpaqueFunctor *opaqueFunctor) noexcept;
+    void disconnect(const OpaqueFunctor *opaqueFunctor) noexcept;
 
 private:
     Descriptor *_desc = nullptr;

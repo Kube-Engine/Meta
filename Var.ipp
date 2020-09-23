@@ -3,7 +3,7 @@
  * @ Description: Variable
  */
 
-kF::Var::Var(Var &&other) noexcept
+inline kF::Var::Var(Var &&other) noexcept
 {
     if (other.isTrivialValue()) {
         reserve<true>(other.type());
@@ -15,7 +15,7 @@ kF::Var::Var(Var &&other) noexcept
     }
 }
 
-kF::Var &kF::Var::operator=(Var &&other) noexcept
+inline kF::Var &kF::Var::operator=(Var &&other) noexcept
 {
     if (other.isTrivialValue()) {
         destruct<true>();
@@ -30,7 +30,7 @@ kF::Var &kF::Var::operator=(Var &&other) noexcept
 }
 
 template<typename Type, bool DestructInstance>
-void kF::Var::assign(Type &&other)
+inline void kF::Var::assign(Type &&other)
 {
     using DirectType = decltype(other);
     using FlatType = std::remove_cvref_t<Type>;
@@ -60,7 +60,7 @@ void kF::Var::assign(Type &&other)
 }
 
 template<bool CheckIfAssignable>
-void kF::Var::deepCopy(const Var &other)
+inline void kF::Var::deepCopy(const Var &other)
 {
     bool assigned = false;
 
@@ -79,7 +79,7 @@ void kF::Var::deepCopy(const Var &other)
 }
 
 template<typename UnarrangedType, bool DestructInstance, typename ...Args>
-void kF::Var::emplace(Args &&...args)
+inline void kF::Var::emplace(Args &&...args)
 {
     using Type = typename Meta::Internal::ArrangeType<UnarrangedType>::Type;
 
@@ -99,7 +99,7 @@ void kF::Var::emplace(Args &&...args)
 }
 
 template<typename ...Args>
-void kF::Var::construct(const HashedName name, Args &&...args)
+inline void kF::Var::construct(const HashedName name, Args &&...args)
 {
     auto type = Meta::Resolver::FindType(name);
 
@@ -132,7 +132,7 @@ void kF::Var::construct(const HashedName name, Args &&...args)
 }
 
 template<bool ResetMembers>
-void kF::Var::destruct(void)
+inline void kF::Var::destruct(void)
 {
     if (!_type)
         return;
@@ -154,7 +154,7 @@ void kF::Var::destruct(void)
 }
 
 template<typename Type>
-Type &kF::Var::cast(void) noexcept_ndebug
+inline Type &kF::Var::cast(void) noexcept_ndebug
 {
     kFAssert(isCastAble<Type>(),
         throw std::runtime_error("Var::cast: Invalid cast"));
@@ -162,7 +162,7 @@ Type &kF::Var::cast(void) noexcept_ndebug
 }
 
 template<typename Type>
-const Type &kF::Var::cast(void) const noexcept_ndebug
+inline const Type &kF::Var::cast(void) const noexcept_ndebug
 {
     kFAssert(isCastAble<Type>(),
         throw std::runtime_error("Var::cast: Invalid cast"));
@@ -170,7 +170,7 @@ const Type &kF::Var::cast(void) const noexcept_ndebug
 }
 
 template<typename Type>
-Type *kF::Var::tryCast(void) noexcept
+inline Type *kF::Var::tryCast(void) noexcept
 {
     if (isCastAble<Type>())
         return &as<Type>();
@@ -178,7 +178,7 @@ Type *kF::Var::tryCast(void) noexcept
 }
 
 template<typename Type>
-const Type *kF::Var::tryCast(void) const noexcept
+inline const Type *kF::Var::tryCast(void) const noexcept
 {
     if (isCastAble<Type>())
         return &as<Type>();
@@ -186,7 +186,7 @@ const Type *kF::Var::tryCast(void) const noexcept
 }
 
 template<typename Type>
-Type kF::Var::directConvert(void) const
+inline Type kF::Var::directConvert(void) const
 {
     auto ty = Meta::Factory<Type>::Resolve();
 
@@ -200,7 +200,7 @@ Type kF::Var::directConvert(void) const
 }
 
 template<bool IsTrivial>
-void kF::Var::reserve(const Meta::Type type) noexcept_ndebug
+inline void kF::Var::reserve(const Meta::Type type) noexcept_ndebug
 {
     _type = type;
     if constexpr (IsTrivial)

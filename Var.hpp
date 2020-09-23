@@ -57,7 +57,7 @@ public:
     Var(const Var &other) { deepCopy<false>(other); }
 
     /** @brief Move constructor */
-    inline Var(Var &&other) noexcept;
+    Var(Var &&other) noexcept;
 
     /** @brief Emplace constructor */
     template<typename Type, std::enable_if_t<!std::is_same_v<std::remove_cvref_t<Type>, Var>>* = nullptr>
@@ -70,7 +70,7 @@ public:
     Var &operator=(const Var &other) noexcept { deepCopy<true>(other); return *this; }
 
     /** @brief Move assignment */
-    inline Var &operator=(Var &&other) noexcept;
+    Var &operator=(Var &&other) noexcept;
 
     /** @brief Checks if the instance is not empty */
     [[nodiscard]] explicit operator bool(void) const noexcept { return _type.operator bool(); }
@@ -85,7 +85,7 @@ public:
 
     /** @brief Emplaces a type into the current instance */
     template<typename Type, bool DestructInstance = true, typename ...Args>
-    inline void emplace(Args &&...args);
+    void emplace(Args &&...args);
 
     /** @brief Construct semantic */
     template<typename ...Args>
@@ -93,7 +93,7 @@ public:
 
     /** @brief Release internal type */
     template<bool ResetMembers = true>
-    inline void destruct(void);
+    void destruct(void);
 
     /** @brief Get internal type */
     [[nodiscard]] Meta::Type type(void) const noexcept { return _type; }
@@ -130,15 +130,15 @@ public:
 
     /** @brief Tries to cast internal to himself or base type (If impossible, will throw in debug or crash in release */
     template<typename Type>
-    [[nodiscard]] inline Type &cast(void) noexcept_ndebug;
+    [[nodiscard]] Type &cast(void) noexcept_ndebug;
     template<typename Type>
-    [[nodiscard]] inline const Type &cast(void) const noexcept_ndebug;
+    [[nodiscard]] const Type &cast(void) const noexcept_ndebug;
 
     /** @brief Tries to cast internal to himself or base type (If impossible, will return nullptr */
     template<typename Type>
-    [[nodiscard]] inline Type *tryCast(void) noexcept;
+    [[nodiscard]] Type *tryCast(void) noexcept;
     template<typename Type>
-    [[nodiscard]] inline const Type *tryCast(void) const noexcept;
+    [[nodiscard]] const Type *tryCast(void) const noexcept;
 
     /** @brief Check if internal is castable to given type */
     template<typename Type>
@@ -189,7 +189,7 @@ public:
      * @brief Same as 'reserve' but with compile time knowledge of type triviallity
      */
     template<bool IsTrivial>
-    inline void reserve(const Meta::Type type) noexcept_ndebug;
+    void reserve(const Meta::Type type) noexcept_ndebug;
 
 private:
     Meta::Type _type {};

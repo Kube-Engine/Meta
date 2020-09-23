@@ -54,7 +54,7 @@ public:
     static void RegisterSignal(const HashedName name) noexcept_ndebug;
 
     /** @brief Resolve the templated type's meta descriptor */
-    [[nodiscard]] inline static Meta::Type Resolve(void) noexcept { return Meta::Type(&Factory<Type>::GetDescriptor()); }
+    [[nodiscard]] static Meta::Type Resolve(void) noexcept { return Meta::Type(&Factory<Type>::GetDescriptor()); }
 
     /** @brief Default construct */
     FactoryBase(void) = default;

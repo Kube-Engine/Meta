@@ -65,7 +65,7 @@ kF::Meta::Connection kF::Meta::Signal::connect(const Sender &sender, const Recei
 }
 
 template<typename Sender, typename Functor>
-kF::Meta::Connection kF::Meta::Signal::connect(const Sender &sender, Functor &&functor) noexcept_ndebug
+inline kF::Meta::Connection kF::Meta::Signal::connect(const Sender &sender, Functor &&functor) noexcept_ndebug
 {
     return connect(sender, nullptr, std::forward<Functor>(functor));
 }
@@ -86,7 +86,7 @@ void kF::Meta::Signal::emit(const Sender &sender, Args &&...args)
     }
 }
 
-void kF::Meta::Signal::disconnect(const OpaqueFunctor *opaqueFunctor) noexcept
+inline void kF::Meta::Signal::disconnect(const OpaqueFunctor *opaqueFunctor) noexcept
 {
     for (auto i = 0u; auto &slot : _desc->slots) {
         if (slot.opaqueFunctor.get() != opaqueFunctor) {
