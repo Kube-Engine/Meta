@@ -14,11 +14,9 @@
 
 #include <Kube/Core/Hash.hpp>
 #include <Kube/Core/Assert.hpp>
+#include <Kube/Core/Utils.hpp>
 
 #include "Forward.hpp"
-
-/** @brief Compile-time ternary expression */
-#define ConstexprTernary(condition, body, elseBody) [] { if constexpr (condition) { return body; } else { return elseBody; } }()
 
 namespace kF
 {
@@ -139,7 +137,7 @@ namespace kF
             template<auto FunctionPtr>
             [[nodiscard]] OpaqueFunction GetFunctionIdentifier(void) noexcept { return FunctionIdentifier<FunctionPtr>::Get(); }
 
-            constexpr auto TrivialTypeSizeLimit = sizeof(std::string);
+            constexpr auto TrivialTypeSizeLimit = 32;
 
             /** @brief Helper to know if a type is trivial or not */
             template<typename Type>

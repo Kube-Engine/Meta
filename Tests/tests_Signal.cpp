@@ -40,13 +40,12 @@ TEST(Signal, NoParameters)
     sig.emit(&foo);
     ASSERT_EQ(x, 2);
 
+#if KUBE_DEBUG_BUILD
     // Too many arguments
-    if constexpr (KUBE_DEBUG_BUILD)
-        ASSERT_ANY_THROW(sig.emit(&foo, 42));
-
+    ASSERT_ANY_THROW(sig.emit(&foo, 42));
     // Mismatching connect
-    if constexpr (KUBE_DEBUG_BUILD)
-        ASSERT_ANY_THROW(sig.connect(&foo, [](int) {}));
+    ASSERT_ANY_THROW(sig.connect(&foo, [](int) {}).disconnect());
+#endif
 }
 
 TEST(Signal, MultipleParameters)
@@ -97,18 +96,15 @@ TEST(Signal, MultipleParameters)
 
     // Non-convertible slot signature
     conn = sig.connect(&foo, [](const std::string &, Foo) {});
-    if constexpr (KUBE_DEBUG_BUILD)
-        ASSERT_ANY_THROW(sig.emit(&foo, 0, 0));
 
+#if KUBE_DEBUG_BUILD
+    // Invalid arguments
+    ASSERT_ANY_THROW(sig.emit(&foo, 0, 0));
     // Not enough arguments
-    if constexpr (KUBE_DEBUG_BUILD)
-        ASSERT_ANY_THROW(sig.emit(&foo, 42));
-
+    ASSERT_ANY_THROW(sig.emit(&foo, 42));
     // Too many arguments
-    if constexpr (KUBE_DEBUG_BUILD)
-        ASSERT_ANY_THROW(sig.emit(&foo, 42, 42.5f, 43));
-
+    ASSERT_ANY_THROW(sig.emit(&foo, 42, 42.5f, 43));
     // Mismatching connect
-    if constexpr (KUBE_DEBUG_BUILD)
-        ASSERT_ANY_THROW(sig.connect(&foo, [](int, float, int) {}));
+    ASSERT_ANY_THROW(sig.connect(&foo, [](int, float, int) {}).disconnect());
+#endif
 }

@@ -98,6 +98,9 @@ struct kF::Meta::OpaqueFunctor
     InvokeFunc invokeFunc { nullptr };
     Var data {};
 
+    /** @brief Check if the opaque functor is valid */
+    operator bool(void) const noexcept { return invokeFunc != nullptr; }
+
     /** @brief Constructs the opaque functor of a slot */
     template<typename Receiver, typename Functor, typename Decomposer, bool AllowNullFunctor = false>
     static OpaqueFunctor Construct(const void *receiver, Functor &&functor) noexcept;
