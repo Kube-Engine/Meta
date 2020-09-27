@@ -4,7 +4,7 @@
  */
 
 template<auto SignalPtr>
-kF::Meta::Signal::Descriptor kF::Meta::Signal::Descriptor::Construct(const HashedName name) noexcept
+inline kF::Meta::Signal::Descriptor kF::Meta::Signal::Descriptor::Construct(const HashedName name) noexcept
 {
     using Decomposer = Internal::FunctionDecomposerHelper<decltype(SignalPtr)>;
 
@@ -16,7 +16,7 @@ kF::Meta::Signal::Descriptor kF::Meta::Signal::Descriptor::Construct(const Hashe
 }
 
 template<typename Receiver, typename Functor, typename Decomposer, bool AllowNullFunctor>
-kF::Meta::OpaqueFunctor kF::Meta::OpaqueFunctor::Construct(const void *receiver, Functor &&functor) noexcept
+inline kF::Meta::OpaqueFunctor kF::Meta::OpaqueFunctor::Construct(const void *receiver, Functor &&functor) noexcept
 {
     static_assert(AllowNullFunctor || !std::is_same_v<Decomposer, void>, "Invalid functor detected");
 
@@ -39,7 +39,7 @@ kF::Meta::OpaqueFunctor kF::Meta::OpaqueFunctor::Construct(const void *receiver,
 }
 
 template<typename Sender, typename Receiver, typename Functor>
-kF::Meta::Connection kF::Meta::Signal::connect(const Sender &sender, const Receiver &receiver, Functor &&functor) noexcept_ndebug
+inline kF::Meta::Connection kF::Meta::Signal::connect(const Sender &sender, const Receiver &receiver, Functor &&functor) noexcept_ndebug
 {
     using Decomposer = Internal::FunctionDecomposerHelper<std::remove_cvref_t<Functor>>;
 
@@ -71,7 +71,7 @@ inline kF::Meta::Connection kF::Meta::Signal::connect(const Sender &sender, Func
 }
 
 template<typename Sender, typename ...Args>
-void kF::Meta::Signal::emit(const Sender &sender, Args &&...args)
+inline void kF::Meta::Signal::emit(const Sender &sender, Args &&...args)
 {
     const void * const senderPtr = Internal::RetreiveOpaquePtr(sender);
 

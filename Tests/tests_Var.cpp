@@ -41,20 +41,20 @@ TEST(Var, NonTrivialEmplace)
 
 TEST(Var, ValueAssignBasics)
 {
-    using Array = std::array<int, Meta::Internal::TrivialTypeSizeLimit * 2>;
+    using Array = std::array<int, Meta::Internal::VarSmallOptimizationSize * 2>;
 
     Var var;
 
     var.assign(42);
-    ASSERT_EQ(var.storageType(), Var::StorageType::ValueTrivial);
+    ASSERT_EQ(var.storageType(), Var::StorageType::ValueOptimized);
     ASSERT_EQ(var.as<int>(), 42);
 
     var.assign(std::string("abc"));
-    ASSERT_EQ(var.storageType(), Var::StorageType::ValueTrivial);
+    ASSERT_EQ(var.storageType(), Var::StorageType::ValueOptimized);
     ASSERT_EQ(var.as<std::string>(), "abc");
 
     var.assign(std::vector<int> { 42 });
-    ASSERT_EQ(var.storageType(), Var::StorageType::ValueTrivial);
+    ASSERT_EQ(var.storageType(), Var::StorageType::ValueOptimized);
     ASSERT_EQ(var.as<std::vector<int>>()[0], 42);
 
     var.assign(Array { 42 });

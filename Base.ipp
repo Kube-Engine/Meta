@@ -12,43 +12,43 @@ kF::Meta::Type kF::Meta::Internal::FunctionDecomposer<Return(Args...)>::ArgType(
 }
 
 template<typename Type>
-void kF::Meta::Internal::MakeDefaultConstructor(void *instance)
+void kF::Meta::Internal::MakeDefaultConstructor(void *instance) noexcept_constructible(Type)
 {
     new (instance) Type {};
 }
 
 template<typename Type>
-void kF::Meta::Internal::MakeCopyConstructor(void *instance, const void *data)
+void kF::Meta::Internal::MakeCopyConstructor(void *instance, const void *data) noexcept_copy_constructible(Type)
 {
     new (instance) Type { *reinterpret_cast<const Type *>(data) };
 }
 
 template<typename Type>
-void kF::Meta::Internal::MakeMoveConstructor(void *instance, void *data)
+void kF::Meta::Internal::MakeMoveConstructor(void *instance, void *data) noexcept_move_constructible(Type)
 {
     new (instance) Type { std::move(*reinterpret_cast<Type *>(data)) };
 }
 
 template<typename Type>
-void kF::Meta::Internal::MakeCopyAssignment(void *instance, const void *data)
+void kF::Meta::Internal::MakeCopyAssignment(void *instance, const void *data) noexcept_copy_assignable(Type)
 {
     *reinterpret_cast<Type *>(instance) = *reinterpret_cast<const Type *>(data);
 }
 
 template<typename Type>
-void kF::Meta::Internal::MakeMoveAssignment(void *instance, void *data)
+void kF::Meta::Internal::MakeMoveAssignment(void *instance, void *data) noexcept_move_assignable(Type)
 {
     *reinterpret_cast<Type *>(instance) = std::move(*reinterpret_cast<Type *>(data));
 }
 
 template<typename Type>
-void kF::Meta::Internal::MakeDestructor(void *data)
+void kF::Meta::Internal::MakeDestructor(void *data) noexcept_destructible(Type)
 {
     reinterpret_cast<Type *>(data)->~Type();
 }
 
-template<typename From, typename To, typename>
-kF::Var kF::Meta::Internal::MakeConverter(const void *from)
+template<typename From, typename To>
+kF::Var kF::Meta::Internal::MakeConverter(const void *from) noexcept_expr(static_cast<To>(std::declval<From>()))
 {
     Var to;
 
@@ -57,21 +57,12 @@ kF::Var kF::Meta::Internal::MakeConverter(const void *from)
 }
 
 template<typename From, typename To, auto FunctionPtr>
-kF::Var kF::Meta::Internal::MakeCustomConverter(const void *from)
+kF::Var kF::Meta::Internal::MakeCustomConverter(const void *from) noexcept_expr(FunctionPtr(std::declval<const From &>()))
 {
     Var to;
 
     to.emplace<To>(std::invoke(FunctionPtr, *reinterpret_cast<const From *>(from)));
     return to;
-}
-
-template<typename Type>
-bool kF::Meta::Internal::MakeToBool(const void *data)
-{
-    if constexpr (std::experimental::is_detected_exact_v<bool, Internal::BoolOperatorCheck, Type>)
-        return reinterpret_cast<const Type *>(data)->operator bool();
-    else
-        return *reinterpret_cast<const Type *>(data);
 }
 
 template<typename Type, auto OperatorFunc, kF::Meta::UnaryOperator Operator>

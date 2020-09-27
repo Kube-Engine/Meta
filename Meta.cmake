@@ -19,7 +19,7 @@ set(KubeMetaSources
     ${KubeMetaDir}/Function.ipp
     ${KubeMetaDir}/Register.cpp
     ${KubeMetaDir}/Resolver.hpp
-    ${KubeMetaDir}/Resolver.cpp
+    ${KubeMetaDir}/Resolver.ipp
     ${KubeMetaDir}/Signal.hpp
     ${KubeMetaDir}/Signal.ipp
     ${KubeMetaDir}/Type.hpp
@@ -27,7 +27,6 @@ set(KubeMetaSources
     ${KubeMetaDir}/Type.cpp
     ${KubeMetaDir}/Var.hpp
     ${KubeMetaDir}/Var.ipp
-    ${KubeMetaDir}/Var.cpp
 )
 
 add_library(${PROJECT_NAME} ${KubeMetaSources})

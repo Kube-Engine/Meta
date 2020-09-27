@@ -33,7 +33,7 @@ public:
         const TypeID typeID; // Unique type identifier
         HashedName name; // Hashed name of the type
         const std::size_t typeSize; // Size of the type
-        const bool isTrivial; // If the type is considered 'trivial' in engine
+        const bool isSmallOptimized; // If the type is considered 'trivial' in engine
         const bool isVoid; // If the type is void
         const bool isIntegral; // If the type is an integral number
         const bool isFloating; // If the type is a floating number
@@ -73,7 +73,7 @@ public:
     Type(const Type &other) noexcept = default;
 
     /** @brief Copy assignment */
-    Type &operator=(const Type &other) = default;
+    Type &operator=(const Type &other) noexcept = default;
 
     /** @brief Fast valid check */
     [[nodiscard]] operator bool(void) const noexcept { return _desc; }
@@ -92,7 +92,7 @@ public:
     [[nodiscard]] std::size_t typeSize(void) const noexcept { return _desc->typeSize; }
 
     /** @brief Check if type is optimized */
-    [[nodiscard]] bool isTrivial(void) const noexcept { return _desc->isTrivial; }
+    [[nodiscard]] bool isSmallOptimized(void) const noexcept { return _desc->isSmallOptimized; }
 
     /** @brief Check if type is void */
     [[nodiscard]] bool isVoid(void) const noexcept { return _desc->isVoid; }

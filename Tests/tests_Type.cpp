@@ -45,7 +45,7 @@ TEST(Type, MetaSemantics)
     ASSERT_EQ(fact.typeID(), typeid(FooPtr));
     ASSERT_EQ(fact.name(), 0);
     ASSERT_EQ(fact.typeSize(), sizeof(FooPtr));
-    ASSERT_EQ(fact.isTrivial(), Meta::Internal::IsTrivial<FooPtr>);
+    ASSERT_EQ(fact.isSmallOptimized(), Meta::Internal::IsVarSmallOptimized<FooPtr>);
     ASSERT_FALSE(fact.isVoid());
     ASSERT_FALSE(fact.isIntegral());
     ASSERT_FALSE(fact.isFloating());

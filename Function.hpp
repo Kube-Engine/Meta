@@ -37,7 +37,7 @@ public:
     Function(const Function &other) noexcept = default;
 
     /** @brief Copy assignment */
-    Function &operator=(const Function &other) = default;
+    Function &operator=(const Function &other) noexcept = default;
 
     /** @brief Fast valid check */
     [[nodiscard]] operator bool(void) const noexcept { return _desc; }

@@ -4,7 +4,7 @@
  */
 
 template<typename Type, auto FunctionPtr>
-kF::Meta::Function::Descriptor kF::Meta::Function::Descriptor::Construct(const HashedName name) noexcept
+inline kF::Meta::Function::Descriptor kF::Meta::Function::Descriptor::Construct(const HashedName name) noexcept
 {
     using FunctionType = decltype(FunctionPtr);
     using Decomposer = Meta::Internal::FunctionDecomposerHelper<FunctionType>;
@@ -23,7 +23,7 @@ kF::Meta::Function::Descriptor kF::Meta::Function::Descriptor::Construct(const H
 }
 
 template<typename ...Args>
-kF::Var kF::Meta::Function::invoke(const void *instance, Args &&...args) const
+inline kF::Var kF::Meta::Function::invoke(const void *instance, Args &&...args) const
 {
     kFAssert(sizeof...(Args) == argsCount(),
         return Var());

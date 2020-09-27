@@ -3,8 +3,8 @@
  * @ Description: Meta custom constructor
  */
 
-template<typename Type, typename ...Args>
-kF::Meta::Constructor::Descriptor kF::Meta::Constructor::Descriptor::Construct(void) noexcept
+template<typename Type, typename ...Args> requires std::constructible_from<Type, Args...>
+inline kF::Meta::Constructor::Descriptor kF::Meta::Constructor::Descriptor::Construct(void) noexcept
 {
     static_assert(sizeof...(Args) > 0, "A meta custom constructor must have at least one argument");
 
@@ -25,17 +25,17 @@ kF::Meta::Constructor::Descriptor kF::Meta::Constructor::Descriptor::Construct(v
 }
 
 template<typename ...Args>
-kF::Var kF::Meta::Constructor::invoke(Args &&...args) const
+inline kF::Var kF::Meta::Constructor::invoke(Args &&...args) const
 {
     Var var;
     auto returnType = type();
 
-    if (returnType.isTrivial()) {
-        var.reserve<true>(returnType);
+    if (returnType.isSmallOptimized()) {
+        var.reserve<true, false>(returnType);
         if (!invoke(var.data<true>(), std::forward<Args>(args)...))
             return Var();
     } else {
-        var.reserve<false>(returnType);
+        var.reserve<false, false>(returnType);
         if (!invoke(var.data<false>(), std::forward<Args>(args)...))
             return Var();
     }
@@ -43,7 +43,7 @@ kF::Var kF::Meta::Constructor::invoke(Args &&...args) const
 }
 
 template<typename ...Args>
-bool kF::Meta::Constructor::invoke(void *instance, Args &&...args) const
+inline bool kF::Meta::Constructor::invoke(void *instance, Args &&...args) const
 {
     kFAssert(sizeof...(Args) == argsCount(),
         throw std::logic_error("Meta::Constructor::invoke: Invalid number of arguments"));

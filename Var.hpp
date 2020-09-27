@@ -21,13 +21,13 @@ public:
     /**
      * @brief Describes how the internal instance is stored
      *
-     * Value and ValueTrivial are for copied or moved instances
+     * Value and ValueOptimized are for copied or moved instances
      * ReferenceVolatile and ReferenceConstant are for assigned references
      */
     enum class StorageType : std::size_t {
         Undefined,
         Value,
-        ValueTrivial,
+        ValueOptimized,
         ReferenceVolatile,
         ReferenceConstant
     };
@@ -35,7 +35,7 @@ public:
     /** @brief Small optimisation of Var instance */
     union Cache {
         void *ptr;
-        std::byte memory[Meta::Internal::TrivialTypeSizeLimit];
+        std::byte memory[Meta::Internal::VarSmallOptimizationSize];
     };
 
     /** @brief Assigns a type value to a Var */
@@ -57,20 +57,20 @@ public:
     Var(const Var &other) { deepCopy<false>(other); }
 
     /** @brief Move constructor */
-    Var(Var &&other) noexcept;
+    Var(Var &&other);
 
     /** @brief Emplace constructor */
     template<typename Type, std::enable_if_t<!std::is_same_v<std::remove_cvref_t<Type>, Var>>* = nullptr>
-    Var(Type &&value) { emplace<std::remove_cvref_t<Type>, false>(std::forward<Type>(value)); }
+    Var(Type &&value) noexcept_constructible(Type) { emplace<std::remove_cvref_t<Type>, false>(std::forward<Type>(value)); }
 
     /** @brief If not empty, will destruct the internal value */
     ~Var(void) { destruct<false>(); }
 
     /** @brief Copy assignment, deep copy ! */
-    Var &operator=(const Var &other) noexcept { deepCopy<true>(other); return *this; }
+    Var &operator=(const Var &other) { deepCopy<true>(other); return *this; }
 
     /** @brief Move assignment */
-    Var &operator=(Var &&other) noexcept;
+    Var &operator=(Var &&other);
 
     /** @brief Checks if the instance is not empty */
     [[nodiscard]] explicit operator bool(void) const noexcept { return _type.operator bool(); }
@@ -85,10 +85,10 @@ public:
 
     /** @brief Emplaces a type into the current instance */
     template<typename Type, bool DestructInstance = true, typename ...Args>
-    void emplace(Args &&...args);
+    void emplace(Args &&...args) noexcept(!DestructInstance && nothrow_constructible(Type, Args...));
 
     /** @brief Construct semantic */
-    template<typename ...Args>
+    template<bool DestructInstance = true, typename ...Args>
     void construct(const HashedName name, Args &&...args);
 
     /** @brief Release internal type */
@@ -105,18 +105,18 @@ public:
     [[nodiscard]] bool isConstant(void) const noexcept { return _storageType == StorageType::ReferenceConstant; }
 
     /** @brief Fast check of 'type().isTrivial() && storageType == StorageType::Value' */
-    [[nodiscard]] bool isTrivialValue(void) const noexcept { return _storageType == StorageType::ValueTrivial; }
+    [[nodiscard]] bool isSmallOptimizedValue(void) const noexcept { return _storageType == StorageType::ValueOptimized; }
 
     /** @brief Check if type is void */
     [[nodiscard]] bool isVoid(void) const noexcept { return _type.isVoid(); }
 
     /** @brief Retreive opaque internal data */
-    [[nodiscard]] void *data(void) const noexcept { return isTrivialValue() ? data<true>() : data<false>(); }
+    [[nodiscard]] void *data(void) const noexcept { return isSmallOptimizedValue() ? data<true>() : data<false>(); }
 
-    /** @brief Retreive opaque internal data knowing triviality at compile time */
-    template<bool IsTrivial>
+    /** @brief Retreive opaque internal data knowing small optimization state at compile time */
+    template<bool IsSmallOptimized>
     [[nodiscard]] void *data(void) const noexcept {
-        if constexpr (IsTrivial)
+        if constexpr (IsSmallOptimized)
             return const_cast<void *>(reinterpret_cast<const void *>(&_data.memory));
         else
             return const_cast<void *>(_data.ptr);
@@ -183,12 +183,13 @@ public:
      * This function makes access to the instance unsafe
      * You must construct the type manually before trying to use the instance
      */
+    template<bool DestructInstance>
     void reserve(const Meta::Type type) noexcept_ndebug;
 
     /**
      * @brief Same as 'reserve' but with compile time knowledge of type triviallity
      */
-    template<bool IsTrivial>
+    template<bool IsSmallOptimized, bool DestructInstance>
     void reserve(const Meta::Type type) noexcept_ndebug;
 
 private:

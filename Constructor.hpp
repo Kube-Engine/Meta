@@ -20,7 +20,7 @@ public:
         const Type type;
         const InvokeFunc invokeFunc;
 
-        template<typename Type, typename ...Args>
+        template<typename Type, typename ...Args> requires std::constructible_from<Type, Args...>
         static Descriptor Construct(void) noexcept;
     };
 
@@ -31,7 +31,7 @@ public:
     Constructor(const Constructor &other) noexcept = default;
 
     /** @brief Copy assignment */
-    Constructor &operator=(const Constructor &other) = default;
+    Constructor &operator=(const Constructor &other) noexcept = default;
 
     /** @brief Fast valid check */
     [[nodiscard]] operator bool(void) const noexcept { return _desc; }

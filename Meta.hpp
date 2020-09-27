@@ -26,4 +26,5 @@
 #include "Data.ipp"
 #include "Signal.ipp"
 #include "Factory.ipp"
+#include "Resolver.ipp"
 #include "Var.ipp"

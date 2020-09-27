@@ -7,48 +7,6 @@
 
 using namespace kF;
 
-Var Meta::Type::defaultConstruct(void) const
-{
-    Var var;
-
-    if (isTrivial()) {
-        var.reserve<true>(*this);
-        defaultConstruct(var.data<true>());
-    } else {
-        var.reserve<false>(*this);
-        defaultConstruct(var.data<false>());
-    }
-    return var;
-}
-
-Var Meta::Type::copyConstruct(const void *data) const
-{
-    Var var;
-
-    if (isTrivial()) {
-        var.reserve<true>(*this);
-        copyConstruct(var.data<true>(), data);
-    } else {
-        var.reserve<false>(*this);
-        copyConstruct(var.data<false>(), data);
-    }
-    return var;
-}
-
-Var Meta::Type::moveConstruct(void *data) const
-{
-    Var var;
-
-    if (isTrivial()) {
-        var.reserve<true>(*this);
-        moveConstruct(var.data<true>(), data);
-    } else {
-        var.reserve<false>(*this);
-        moveConstruct(var.data<false>(), data);
-    }
-    return var;
-}
-
 Meta::Type Meta::Type::findBase(const Meta::Type type) const noexcept
 {
     for (const auto &base : _desc->bases) {

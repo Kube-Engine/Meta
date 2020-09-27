@@ -18,6 +18,10 @@
 
 #include "Forward.hpp"
 
+#ifndef KF_META_VAR_SMALL_OPTIMIZATION_SIZE
+# define KF_META_VAR_SMALL_OPTIMIZATION_SIZE 32
+#endif
+
 namespace kF
 {
     namespace Meta
@@ -137,97 +141,19 @@ namespace kF
             template<auto FunctionPtr>
             [[nodiscard]] OpaqueFunction GetFunctionIdentifier(void) noexcept { return FunctionIdentifier<FunctionPtr>::Get(); }
 
-            constexpr auto TrivialTypeSizeLimit = 32;
+            constexpr auto VarSmallOptimizationSize = KF_META_VAR_SMALL_OPTIMIZATION_SIZE;
 
             /** @brief Helper to know if a type is trivial or not */
             template<typename Type>
-            constexpr bool IsTrivial = sizeof(Type) <= TrivialTypeSizeLimit;
+            constexpr bool IsVarSmallOptimized = sizeof(Type) <= VarSmallOptimizationSize;
 
             /** @brief std::enable_if alias for trivial types */
             template<typename Type, typename Internal = void>
-            using EnableIfTrivial = std::enable_if<IsTrivial<Type>, Internal>;
+            using EnableIfSmallOptimized = std::enable_if<IsVarSmallOptimized<Type>, Internal>;
 
             /** @brief std::enable_if alias for non-trivial types */
             template<typename Type, typename Internal = void>
-            using EnableIfNotTrivial = std::enable_if<!IsTrivial<Type>>;
-
-            /** Helpers used to generate opaque default, copy and move constructor functions */
-            template<typename Type>
-            void MakeDefaultConstructor(void *instance);
-            template<typename Type>
-            void MakeCopyConstructor(void *instance, const void *data);
-            template<typename Type>
-            void MakeMoveConstructor(void *instance, void *data);
-
-            /** @brief Helpers used to generate opaque assignment functions */
-            template<typename Type>
-            void MakeCopyAssignment(void *instance, const void *data);
-            template<typename Type>
-            void MakeMoveAssignment(void *instance, void *data);
-
-            /** @brief Helper used to generate opaque destructor functions */
-            template<typename Type>
-            void MakeDestructor(void *data);
-
-            /** @brief Helpers used to generate opaque conversion functions */
-            template<typename From, typename To, typename = std::enable_if<std::is_convertible_v<From, To>>>
-            Var MakeConverter(const void *from);
-            template<typename From, typename To, auto FunctionPtr>
-            Var MakeCustomConverter(const void *from);
-
-            /** @brief Helpers used to generate opaque primitive functions */
-            template<typename Type>
-            [[nodiscard]] bool MakeToBool(const void *data);
-
-            /** @brief Helpers used to generate opaque operators functions */
-            template<typename Type, auto OperatorFunc, kF::Meta::UnaryOperator Operator>
-            Var MakeUnaryOperator(const void *data);
-            template<typename Type, auto OperatorFunc, kF::Meta::BinaryOperator Operator>
-            Var MakeBinaryOperator(const void *data, const Var &var);
-            template<typename Type, auto OperatorFunc, kF::Meta::AssignmentOperator Operator>
-            void MakeAssignmentOperator(void *data, const Var &var);
-
-            /** @brief Helpers to generate unary operator functions */
-            template<typename Type>
-            [[nodiscard]] Type UnaryMinus(const Type &var) { return -var; }
-
-            /** @brief Helpers to generate binary operator functions */
-            template<typename Type>
-            [[nodiscard]] Type BinaryAddition(const Type &lhs, const Type &rhs) { return Type(lhs + rhs); }
-            template<typename Type>
-            [[nodiscard]] Type BinarySubstraction(const Type &lhs, const Type &rhs) { return Type(lhs - rhs); }
-            template<typename Type>
-            [[nodiscard]] Type BinaryMultiplication(const Type &lhs, const Type &rhs) { return Type(lhs * rhs); }
-            template<typename Type>
-            [[nodiscard]] Type BinaryDivision(const Type &lhs, const Type &rhs) { return Type(lhs / rhs); }
-            template<typename Type, std::enable_if_t<!std::is_floating_point_v<Type>>* = nullptr>
-            [[nodiscard]] Type BinaryModulo(const Type &lhs, const Type &rhs) { return Type(lhs % rhs); }
-            template<typename Type, std::enable_if_t<std::is_floating_point_v<Type>>* = nullptr>
-            [[nodiscard]] Type BinaryModulo(const Type &lhs, const Type &rhs) { return static_cast<Type>(static_cast<std::int64_t>(lhs) % static_cast<std::int64_t>(rhs)); }
-
-            /** @brief Helpers to generate assignment operator functions */
-            template<typename Type>
-            void AssignmentAddition(Type &lhs, const Type &rhs) { lhs += rhs; }
-            template<typename Type>
-            void AssignmentSubstraction(Type &lhs, const Type &rhs) { lhs -= rhs; }
-            template<typename Type>
-            void AssignmentMultiplication(Type &lhs, const Type &rhs) { lhs *= rhs; }
-            template<typename Type>
-            void AssignmentDivision(Type &lhs, const Type &rhs) { lhs /= rhs; }
-            template<typename Type, std::enable_if_t<!std::is_floating_point_v<Type>>* = nullptr>
-            void AssignmentModulo(Type &lhs, const Type &rhs) { lhs %= rhs; }
-            template<typename Type, std::enable_if_t<std::is_floating_point_v<Type>>* = nullptr>
-            void AssignmentModulo(Type &lhs, const Type &rhs) { lhs = BinaryModulo(lhs, rhs); }
-
-            /** @brief Helpers to generate pointer operators functions */
-            template<typename Type>
-            [[nodiscard]] Type BinaryAdditionPointer(const Type lhs, const std::size_t rhs) { return lhs + rhs; }
-            template<typename Type>
-            [[nodiscard]] Type BinarySubstractionPointer(const Type lhs, const std::size_t rhs) { return lhs - rhs; }
-            template<typename Type>
-            void AssignmentAdditionPointer(Type &lhs, const std::size_t rhs) { lhs += rhs; }
-            template<typename Type>
-            void AssignmentSubstractionPointer(Type &lhs, const std::size_t rhs) { lhs -= rhs; }
+            using EnableIfNotSmallOptimized = std::enable_if<!IsVarSmallOptimized<Type>>;
 
             /** @brief Helpers to check if an operator is avaible on a Type */
             template<typename Type> using BoolOperatorCheck = decltype(std::declval<Type>().operator bool());
@@ -242,6 +168,86 @@ namespace kF
             template<typename Type> using AssignmentMultiplicationCheck = decltype(std::declval<Type&>() *= std::declval<Type>());
             template<typename Type> using AssignmentDivisionCheck = decltype(std::declval<Type&>() /= std::declval<Type>());
             template<typename Type> using AssignmentModuloCheck = decltype(std::declval<Type&>() %= std::declval<Type>());
+
+            /** Helpers used to generate opaque default, copy and move constructor functions */
+            template<typename Type>
+            void MakeDefaultConstructor(void *instance) noexcept_constructible(Type);
+            template<typename Type>
+            void MakeCopyConstructor(void *instance, const void *data) noexcept_copy_constructible(Type);
+            template<typename Type>
+            void MakeMoveConstructor(void *instance, void *data) noexcept_move_constructible(Type);
+
+            /** @brief Helpers used to generate opaque assignment functions */
+            template<typename Type>
+            void MakeCopyAssignment(void *instance, const void *data) noexcept_copy_assignable(Type);
+            template<typename Type>
+            void MakeMoveAssignment(void *instance, void *data) noexcept_move_assignable(Type);
+
+            /** @brief Helper used to generate opaque destructor functions */
+            template<typename Type>
+            void MakeDestructor(void *data) noexcept_destructible(Type);
+
+            /** @brief Helpers used to generate opaque conversion functions */
+            template<typename From, typename To>
+            Var MakeConverter(const void *from) noexcept_expr(static_cast<To>(std::declval<From>()));
+            template<typename From, typename To, auto FunctionPtr>
+            Var MakeCustomConverter(const void *from) noexcept_expr(FunctionPtr(std::declval<const From &>()));
+
+            /** @brief Helpers used to generate opaque primitive functions */
+            template<typename Type, std::enable_if_t<std::is_convertible_v<Type, bool>>* = nullptr>
+            [[nodiscard]] bool MakeToBool(const void *data) noexcept_convertible(Type, bool) { return static_cast<bool>(*reinterpret_cast<const Type *>(data)); }
+            template<typename Type, std::enable_if_t<std::experimental::is_detected_exact_v<bool, BoolOperatorCheck, Type>>* = nullptr>
+            [[nodiscard]] bool MakeToBool(const void *data) noexcept_convertible(Type, bool) { return reinterpret_cast<const Type *>(data)->operator bool(); }
+
+            /** @brief Helpers used to generate opaque operators functions */
+            template<typename Type, auto OperatorFunc, kF::Meta::UnaryOperator Operator>
+            Var MakeUnaryOperator(const void *data);
+            template<typename Type, auto OperatorFunc, kF::Meta::BinaryOperator Operator>
+            Var MakeBinaryOperator(const void *data, const Var &var);
+            template<typename Type, auto OperatorFunc, kF::Meta::AssignmentOperator Operator>
+            void MakeAssignmentOperator(void *data, const Var &var);
+
+            /** @brief Helpers to generate unary operator functions */
+            template<typename Type>
+            [[nodiscard]] Type UnaryMinus(const Type &var) noexcept_expr(-var) { return -var; }
+
+            /** @brief Helpers to generate binary operator functions */
+            template<typename Type>
+            [[nodiscard]] Type BinaryAddition(const Type &lhs, const Type &rhs) noexcept_expr(lhs + rhs) { return Type(lhs + rhs); }
+            template<typename Type>
+            [[nodiscard]] Type BinarySubstraction(const Type &lhs, const Type &rhs) noexcept_expr(lhs - rhs) { return Type(lhs - rhs); }
+            template<typename Type>
+            [[nodiscard]] Type BinaryMultiplication(const Type &lhs, const Type &rhs) noexcept_expr(lhs * rhs) { return Type(lhs * rhs); }
+            template<typename Type>
+            [[nodiscard]] Type BinaryDivision(const Type &lhs, const Type &rhs) noexcept_expr(lhs / rhs) { return Type(lhs / rhs); }
+            template<typename Type, std::enable_if_t<!std::is_floating_point_v<Type>>* = nullptr>
+            [[nodiscard]] Type BinaryModulo(const Type &lhs, const Type &rhs) noexcept_expr(lhs % rhs) { return Type(lhs % rhs); }
+            template<typename Type, std::enable_if_t<std::is_floating_point_v<Type>>* = nullptr>
+            [[nodiscard]] Type BinaryModulo(const Type &lhs, const Type &rhs) noexcept { return static_cast<Type>(static_cast<std::int64_t>(lhs) % static_cast<std::int64_t>(rhs)); }
+
+            /** @brief Helpers to generate assignment operator functions */
+            template<typename Type>
+            void AssignmentAddition(Type &lhs, const Type &rhs) noexcept_expr(lhs += rhs) { lhs += rhs; }
+            template<typename Type>
+            void AssignmentSubstraction(Type &lhs, const Type &rhs) noexcept_expr(lhs -= rhs) { lhs -= rhs; }
+            template<typename Type>
+            void AssignmentMultiplication(Type &lhs, const Type &rhs) noexcept_expr(lhs *= rhs) { lhs *= rhs; }
+            template<typename Type>
+            void AssignmentDivision(Type &lhs, const Type &rhs) noexcept_expr(lhs /= rhs) { lhs /= rhs; }
+            template<typename Type, std::enable_if_t<!std::is_floating_point_v<Type>>* = nullptr>
+            void AssignmentModulo(Type &lhs, const Type &rhs) noexcept_expr(lhs %= rhs) { lhs %= rhs; }
+            template<typename Type, std::enable_if_t<std::is_floating_point_v<Type>>* = nullptr>
+            void AssignmentModulo(Type &lhs, const Type &rhs) noexcept_expr(lhs = BinaryModulo(lhs, rhs)) { lhs = BinaryModulo(lhs, rhs); }
+
+            /** @brief Helpers to generate pointer operators functions */
+            template<typename Type>
+            [[nodiscard]] Type BinaryAdditionPointer(const Type lhs, const std::size_t rhs) noexcept { return lhs + rhs; }
+            template<typename Type>
+            [[nodiscard]] Type BinarySubstractionPointer(const Type lhs, const std::size_t rhs) noexcept { return lhs - rhs; }
+            template<typename Type>
+            void AssignmentAdditionPointer(Type &lhs, const std::size_t rhs) noexcept { lhs += rhs; }
+            template<typename Type>
+            void AssignmentSubstractionPointer(Type &lhs, const std::size_t rhs) noexcept { lhs -= rhs; }
 
             /** @brief Meta function invoker
              * Will perform different semantics uppon function's arguments
@@ -277,7 +283,8 @@ namespace kF
 
             /** @brief Helper used to retreive a void pointer from a reference (either a reference to nullptr or a variable) */
             template<typename Type>
-            static constexpr const void *RetreiveOpaquePtr(const Type &input) {
+            [[nodiscard]] static constexpr const void *RetreiveOpaquePtr(const Type &input) noexcept
+            {
                 if constexpr (std::is_same_v<std::remove_cvref_t<Type>, std::nullptr_t>)
                     return static_cast<const void *>(input);
                 else if constexpr (std::is_pointer_v<std::remove_cvref_t<Type>>)

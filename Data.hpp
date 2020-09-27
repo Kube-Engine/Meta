@@ -37,7 +37,7 @@ public:
     Data(const Data &other) noexcept = default;
 
     /** @brief Copy assignment */
-    Data &operator=(const Data &other) = default;
+    Data &operator=(const Data &other) noexcept = default;
 
     /** @brief Fast valid check */
     [[nodiscard]] operator bool(void) const noexcept { return _desc; }

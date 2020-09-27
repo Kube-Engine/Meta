@@ -43,8 +43,8 @@ kF::Meta::Type::Descriptor kF::Meta::Type::Descriptor::Construct(void) noexcept
             sizeof(Type),
             0u
         ),
-        isTrivial: ConstexprTernary((!std::is_same_v<Type, void>),
-            Internal::IsTrivial<Type>,
+        isSmallOptimized: ConstexprTernary((!std::is_same_v<Type, void>),
+            Internal::IsVarSmallOptimized<Type>,
             false
         ),
         isVoid: std::is_same_v<Type, void>,
@@ -115,8 +115,50 @@ kF::Meta::Type::Descriptor kF::Meta::Type::Descriptor::Construct(void) noexcept
 #undef MakeOperatorIfPointerableAssignment
 }
 
+inline kF::Var kF::Meta::Type::defaultConstruct(void) const
+{
+    kF::Var var;
+
+    if (isSmallOptimized()) {
+        var.reserve<true, false>(*this);
+        defaultConstruct(var.data<true>());
+    } else {
+        var.reserve<false, false>(*this);
+        defaultConstruct(var.data<false>());
+    }
+    return var;
+}
+
+inline kF::Var kF::Meta::Type::copyConstruct(const void *data) const
+{
+    kF::Var var;
+
+    if (isSmallOptimized()) {
+        var.reserve<true, false>(*this);
+        copyConstruct(var.data<true>(), data);
+    } else {
+        var.reserve<false, false>(*this);
+        copyConstruct(var.data<false>(), data);
+    }
+    return var;
+}
+
+inline kF::Var kF::Meta::Type::moveConstruct(void *data) const
+{
+    Var var;
+
+    if (isSmallOptimized()) {
+        var.reserve<true, false>(*this);
+        moveConstruct(var.data<true>(), data);
+    } else {
+        var.reserve<false, false>(*this);
+        moveConstruct(var.data<false>(), data);
+    }
+    return var;
+}
+
 template<kF::Meta::UnaryOperator Operator>
-kF::Var kF::Meta::Type::invokeOperator(const void *data) const
+inline kF::Var kF::Meta::Type::invokeOperator(const void *data) const
 {
     kFAssert(hasOperator<Operator>(),
         throw std::runtime_error("Meta::Type::invokeOperator: Operator not available"));
@@ -124,7 +166,7 @@ kF::Var kF::Meta::Type::invokeOperator(const void *data) const
 }
 
 template<kF::Meta::BinaryOperator Operator>
-kF::Var kF::Meta::Type::invokeOperator(const void *data, const Var &rhs) const
+inline kF::Var kF::Meta::Type::invokeOperator(const void *data, const Var &rhs) const
 {
     kFAssert(hasOperator<Operator>(),
         throw std::runtime_error("Meta::Type::invokeOperator: Operator not available"));
@@ -132,7 +174,7 @@ kF::Var kF::Meta::Type::invokeOperator(const void *data, const Var &rhs) const
 }
 
 template<kF::Meta::AssignmentOperator Operator>
-void kF::Meta::Type::invokeOperator(void *data, const Var &rhs) const
+inline void kF::Meta::Type::invokeOperator(void *data, const Var &rhs) const
 {
     kFAssert(hasOperator<Operator>(),
         throw std::runtime_error("Meta::Type::invokeOperator: Operator not available"));

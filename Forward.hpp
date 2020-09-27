@@ -17,7 +17,6 @@ namespace kF
         class Function;
         class Data;
         class Signal;
-
         template<typename Type>
         class Factory;
         class Resolver;

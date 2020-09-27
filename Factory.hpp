@@ -57,7 +57,7 @@ public:
     [[nodiscard]] static Meta::Type Resolve(void) noexcept { return Meta::Type(&Factory<Type>::GetDescriptor()); }
 
     /** @brief Default construct */
-    FactoryBase(void) = default;
+    FactoryBase(void) noexcept = default;
 
     /** @brief Alias of Register function */
     FactoryBase(const HashedName name) { Register(name); }

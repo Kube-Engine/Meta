@@ -33,7 +33,7 @@ public:
     Converter(const Converter &other) noexcept = default;
 
     /** @brief Copy assignment */
-    Converter &operator=(const Converter &other) = default;
+    Converter &operator=(const Converter &other) noexcept = default;
 
     /** @brief Fast valid check */
     [[nodiscard]] operator bool(void) const noexcept { return _desc; }

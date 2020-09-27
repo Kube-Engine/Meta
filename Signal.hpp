@@ -45,7 +45,7 @@ public:
     Signal(const Signal &other) noexcept = default;
 
     /** @brief Copy assignment */
-    Signal &operator=(const Signal &other) = default;
+    Signal &operator=(const Signal &other) noexcept = default;
 
     /** @brief Fast valid check */
     [[nodiscard]] operator bool(void) const noexcept { return _desc; }

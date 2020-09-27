@@ -4,7 +4,7 @@
  */
 
 template<typename Type, auto GetFunctionPtr, auto SetFunctionPtr>
-kF::Meta::Data::Descriptor kF::Meta::Data::Descriptor::Construct(const HashedName name) noexcept
+inline kF::Meta::Data::Descriptor kF::Meta::Data::Descriptor::Construct(const HashedName name) noexcept
 {
     using GetFunctionType = decltype(GetFunctionPtr);
     using GetDecomposer = Internal::FunctionDecomposerHelper<GetFunctionType>;
@@ -36,7 +36,7 @@ kF::Meta::Data::Descriptor kF::Meta::Data::Descriptor::Construct(const HashedNam
 }
 
 template<typename Type>
-kF::Var kF::Meta::Data::set(const void *instance, Type &&value) const
+inline kF::Var kF::Meta::Data::set(const void *instance, Type &&value) const
 {
     kFAssert(!isReadOnly(),
         throw std::runtime_error("Meta::Data::set: Data is read only"));

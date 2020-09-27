@@ -32,7 +32,7 @@ private:
     Resolver(void) = delete;
 
     /** @brief Get internal list of descriptors */
-    static Descriptors &GetDescriptors(void) {
+    static Descriptors &GetDescriptors(void) noexcept {
         static Descriptors data;
         return data;
     }

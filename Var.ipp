@@ -3,10 +3,10 @@
  * @ Description: Variable
  */
 
-inline kF::Var::Var(Var &&other) noexcept
+inline kF::Var::Var(Var &&other)
 {
-    if (other.isTrivialValue()) {
-        reserve<true>(other.type());
+    if (other.isSmallOptimizedValue()) {
+        reserve<true, false>(other.type());
         other.type().moveConstruct(data<true>(), other.data<true>());
     } else {
         std::swap(_type, other._type);
@@ -15,11 +15,11 @@ inline kF::Var::Var(Var &&other) noexcept
     }
 }
 
-inline kF::Var &kF::Var::operator=(Var &&other) noexcept
+inline kF::Var &kF::Var::operator=(Var &&other)
 {
-    if (other.isTrivialValue()) {
+    if (other.isSmallOptimizedValue()) {
         destruct<true>();
-        reserve<true>(other.type());
+        reserve<true, false>(other.type());
         other.type().moveConstruct(data<true>(), other.data<true>());
     } else {
         std::swap(_type, other._type);
@@ -70,7 +70,7 @@ inline void kF::Var::deepCopy(const Var &other)
                 throw std::runtime_error("Var::deepCopy: Copy assignment is not supported"));
             other.type().copyAssign(data(), const_cast<void *>(other.data()));
             _type = other.type();
-            _storageType = type().isTrivial() ? StorageType::ValueTrivial : StorageType::Value;
+            _storageType = type().isSmallOptimized() ? StorageType::ValueOptimized : StorageType::Value;
             return;
         }
     kFAssert(other._type.isCopyAssignable(),
@@ -79,7 +79,7 @@ inline void kF::Var::deepCopy(const Var &other)
 }
 
 template<typename UnarrangedType, bool DestructInstance, typename ...Args>
-inline void kF::Var::emplace(Args &&...args)
+inline void kF::Var::emplace(Args &&...args) noexcept(!DestructInstance && nothrow_constructible(UnarrangedType, Args...))
 {
     using Type = typename Meta::Internal::ArrangeType<UnarrangedType>::Type;
 
@@ -88,8 +88,8 @@ inline void kF::Var::emplace(Args &&...args)
     _type = Meta::Factory<Type>::Resolve();
     if constexpr (std::is_same_v<Type, void>) {
         _storageType = StorageType::Undefined;
-    } else if constexpr (Meta::Internal::IsTrivial<Type>) {
-        _storageType = StorageType::ValueTrivial;
+    } else if constexpr (Meta::Internal::IsVarSmallOptimized<Type>) {
+        _storageType = StorageType::ValueOptimized;
         new (data<true>()) Type(std::forward<Args>(args)...);
     } else {
         _storageType = StorageType::Value;
@@ -98,7 +98,7 @@ inline void kF::Var::emplace(Args &&...args)
     }
 }
 
-template<typename ...Args>
+template<bool DestructInstance, typename ...Args>
 inline void kF::Var::construct(const HashedName name, Args &&...args)
 {
     auto type = Meta::Resolver::FindType(name);
@@ -106,11 +106,11 @@ inline void kF::Var::construct(const HashedName name, Args &&...args)
     kFAssert(type,
         throw std::runtime_error("Var::construct: Unknown type name"));
     void *ptr;
-    if (type.isTrivial()) {
-        reserve<true>(type);
+    if (type.isSmallOptimized()) {
+        reserve<true, DestructInstance>(type);
         ptr = data<true>();
     } else {
-        reserve<false>(type);
+        reserve<false, DestructInstance>(type);
         ptr = data<false>();
     }
     if constexpr (sizeof...(Args) == 0) {
@@ -134,14 +134,14 @@ inline void kF::Var::construct(const HashedName name, Args &&...args)
 template<bool ResetMembers>
 inline void kF::Var::destruct(void)
 {
-    if (!_type)
+    if (!_type) [[unlikely]]
         return;
     switch (_storageType) {
     case StorageType::Value:
         _type.destruct(data<false>());
         std::free(data<false>());
         break;
-    case StorageType::ValueTrivial:
+    case StorageType::ValueOptimized:
         _type.destruct(data<true>());
         break;
     default:
@@ -185,6 +185,13 @@ inline const Type *kF::Var::tryCast(void) const noexcept
     return nullptr;
 }
 
+inline kF::Var kF::Var::convert(const Meta::Type type) const
+{
+    if (auto conv = _type.findConverter(type); conv)
+        return conv.invoke(*this);
+    return Var();
+}
+
 template<typename Type>
 inline Type kF::Var::directConvert(void) const
 {
@@ -199,12 +206,103 @@ inline Type kF::Var::directConvert(void) const
     return std::move(res.as<Type>());
 }
 
-template<bool IsTrivial>
+inline bool kF::Var::toBool(void) const
+{
+    kFAssert(type().isBoolConvertible(),
+        throw std::logic_error("Var::toBool: Boolean operator doesn't exists"));
+    return type().toBool(data());
+}
+
+inline kF::Var kF::Var::operator+(const Var &rhs) const
+{
+    kFAssert(type().hasOperator<Meta::BinaryOperator::Addition>(),
+        throw std::logic_error("Var::operator+: Addition operator doesn't exists"));
+    return type().invokeOperator<Meta::BinaryOperator::Addition>(data(), rhs);
+}
+
+inline kF::Var kF::Var::operator-(const Var &rhs) const
+{
+    kFAssert(type().hasOperator<Meta::BinaryOperator::Substraction>(),
+        throw std::logic_error("Var::operator-: Substraction operator doesn't exists"));
+    return type().invokeOperator<Meta::BinaryOperator::Substraction>(data(), rhs);
+}
+
+inline kF::Var kF::Var::operator*(const Var &rhs) const
+{
+    kFAssert(type().hasOperator<Meta::BinaryOperator::Multiplication>(),
+        throw std::logic_error("Var::operator*: Multiplication operator doesn't exists"));
+    return type().invokeOperator<Meta::BinaryOperator::Multiplication>(data(), rhs);
+}
+
+inline kF::Var kF::Var::operator/(const Var &rhs) const
+{
+    kFAssert(type().hasOperator<Meta::BinaryOperator::Division>(),
+        throw std::logic_error("Var::operator/: Division operator doesn't exists"));
+    return type().invokeOperator<Meta::BinaryOperator::Division>(data(), rhs);
+}
+
+inline kF::Var kF::Var::operator%(const Var &rhs) const
+{
+    kFAssert(type().hasOperator<Meta::BinaryOperator::Modulo>(),
+        throw std::logic_error("Var::operator%: Modulo operator doesn't exists"));
+    return type().invokeOperator<Meta::BinaryOperator::Modulo>(data(), rhs);
+}
+
+inline kF::Var &kF::Var::operator+=(const Var &rhs)
+{
+    kFAssert(type().hasOperator<Meta::AssignmentOperator::Addition>(),
+        throw std::logic_error("Var::operator+=: Addition operator doesn't exists"));
+    type().invokeOperator<Meta::AssignmentOperator::Addition>(data(), rhs);
+    return *this;
+}
+
+inline kF::Var &kF::Var::operator-=(const Var &rhs)
+{
+    kFAssert(type().hasOperator<Meta::AssignmentOperator::Substraction>(),
+        throw std::logic_error("Var::operator-=: Substraction operator doesn't exists"));
+    type().invokeOperator<Meta::AssignmentOperator::Substraction>(data(), rhs);
+    return *this;
+}
+
+inline kF::Var &kF::Var::operator*=(const Var &rhs)
+{
+    kFAssert(type().hasOperator<Meta::AssignmentOperator::Multiplication>(),
+        throw std::logic_error("Var::operator*=: Multiplication operator doesn't exists"));
+    type().invokeOperator<Meta::AssignmentOperator::Multiplication>(data(), rhs);
+    return *this;
+}
+
+inline kF::Var &kF::Var::operator/=(const Var &rhs)
+{
+    kFAssert(type().hasOperator<Meta::AssignmentOperator::Division>(),
+        throw std::logic_error("Var::operator/=: Division operator doesn't exists"));
+    type().invokeOperator<Meta::AssignmentOperator::Division>(data(), rhs);
+    return *this;
+}
+
+inline kF::Var &kF::Var::operator%=(const Var &rhs)
+{
+    kFAssert(type().hasOperator<Meta::AssignmentOperator::Modulo>(),
+        throw std::logic_error("Var::operator%=: Modulo operator doesn't exists"));
+    type().invokeOperator<Meta::AssignmentOperator::Modulo>(data(), rhs);
+    return *this;
+}
+
+template<bool DestructInstance>
+inline void kF::Var::reserve(const Meta::Type type) noexcept_ndebug
+{
+    if (type.isSmallOptimized())
+        reserve<true, DestructInstance>(type);
+    else
+        reserve<false, DestructInstance>(type);
+}
+
+template<bool IsSmallOptimized, bool DestructInstance>
 inline void kF::Var::reserve(const Meta::Type type) noexcept_ndebug
 {
     _type = type;
-    if constexpr (IsTrivial)
-        _storageType = StorageType::ValueTrivial;
+    if constexpr (IsSmallOptimized)
+        _storageType = StorageType::ValueOptimized;
     else {
         _storageType = StorageType::Value;
         dataRef() = std::malloc(_type.typeSize());
