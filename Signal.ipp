@@ -22,19 +22,19 @@ inline kF::Meta::OpaqueFunctor kF::Meta::OpaqueFunctor::Construct(const void *re
 
     if constexpr (AllowNullFunctor && std::is_same_v<Decomposer, void>)
         return OpaqueFunctor {
+            data: Var::Emplace<void>(),
             receiver: receiver,
-            invokeFunc: nullptr,
-            data: Var::Emplace<void>()
+            invokeFunc: nullptr
         };
     else
         return OpaqueFunctor {
+            data: std::forward<Functor>(functor),
             receiver: receiver,
             invokeFunc: [](Var &data, const void *receiver, Var *args) -> Var {
                 using FunctorType = std::remove_cvref_t<Functor>;
 
                 return Internal::Invoke<Receiver, Decomposer, Functor>(data.as<FunctorType>(), receiver, args, Decomposer::IndexSequence);
-            },
-            data: std::forward<Functor>(functor)
+            }
         };
 }
 

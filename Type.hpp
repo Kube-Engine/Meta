@@ -5,7 +5,7 @@
 
 #pragma once
 
-#include <vector>
+#include <Kube/Core/FlatVector.hpp>
 
 #include "Base.hpp"
 
@@ -27,44 +27,57 @@ public:
     using AssignmentOperatorFunc = void(*)(void *, const Var &);
     using ToBoolFunc = bool(*)(const void *);
 
-    struct Descriptor
+    enum Flags : std::uint32_t
     {
-        /* Type description */
-        const TypeID typeID; // Unique type identifier
-        HashedName name; // Hashed name of the type
-        const std::size_t typeSize; // Size of the type
-        const bool isSmallOptimized; // If the type is considered 'trivial' in engine
-        const bool isVoid; // If the type is void
-        const bool isIntegral; // If the type is an integral number
-        const bool isFloating; // If the type is a floating number
-        const bool isDouble; // If the type is a floating number
-        const bool isPointer; // If the type is a pointer
+        NoFlags             = 0b0,
+        IsSmallOptimized    = 0b1,
+        IsVoid              = 0b10,
+        IsIntegral          = 0b100,
+        IsFloating          = 0b1000,
+        IsDouble            = 0b10000,
+        IsPointer           = 0b100000
+    };
 
-        /* Type semantics */
+    struct KF_ALIGN_CACHELINE2 Descriptor
+    {
+        // --- Cacheline 1 ---
+        /* Type description - 24 bytes */
+        const TypeID typeID; // Unique type identifier
+        const std::size_t typeSize; // Size of the type
+        HashedName name; // Hashed name of the type
+        Flags flags; // Flags that describe the type
+
+        /* Type semantics - 56 bytes */
         const DefaultConstructorFunc defaultConstructFunc;
         const CopyConstructorFunc copyConstructFunc;
         const MoveConstructorFunc moveConstructFunc;
         const CopyAssignmentFunc copyAssignmentFunc;
         const MoveAssignmentFunc moveAssignmentFunc;
+        // --- Cacheline 2 ---
         const DestructorFunc destructFunc;
         const ToBoolFunc toBoolFunc;
 
-        /* Fast unary and binary operators */
+        /* Fast unary and binary operators - 88 bytes */
         const UnaryOperatorFunc unaryFuncs[static_cast<int>(UnaryOperator::Total)] { nullptr };
         const BinaryOperatorFunc binaryFuncs[static_cast<int>(BinaryOperator::Total)] { nullptr };
         const AssignmentOperatorFunc assignmentFuncs[static_cast<int>(AssignmentOperator::Total)] { nullptr };
+        char _padding[40]; // Padding to the next cacheline
 
-        /* Type registerable meta-data */
-        std::vector<Constructor> constructors;
-        std::vector<Type> bases {};
-        std::vector<Converter> converters {};
-        std::vector<Function> functions {};
-        std::vector<Data> datas {};
-        std::vector<Signal> signals {};
+        // --- Cacheline 4 ---
+
+        /* Type registerable meta-data - 48 bytes */
+        Core::FlatVector<Constructor> constructors;
+        Core::FlatVector<Type> bases {};
+        Core::FlatVector<Converter> converters {};
+        Core::FlatVector<Function> functions {};
+        Core::FlatVector<Data> datas {};
+        Core::FlatVector<Signal> signals {};
 
         template<typename Type>
         static Descriptor Construct(void) noexcept;
     };
+
+    static_assert(sizeof(Descriptor) == Core::Utils::CacheLineSize * 4, "Type descriptor must take 4 cachelines");
 
     /** @brief Construct passing a descriptor instance */
     Type(Descriptor *desc = nullptr) noexcept : _desc(desc) {}
@@ -92,19 +105,22 @@ public:
     [[nodiscard]] std::size_t typeSize(void) const noexcept { return _desc->typeSize; }
 
     /** @brief Check if type is optimized */
-    [[nodiscard]] bool isSmallOptimized(void) const noexcept { return _desc->isSmallOptimized; }
+    [[nodiscard]] bool isSmallOptimized(void) const noexcept { return _desc->flags & Flags::IsSmallOptimized; }
 
     /** @brief Check if type is void */
-    [[nodiscard]] bool isVoid(void) const noexcept { return _desc->isVoid; }
+    [[nodiscard]] bool isVoid(void) const noexcept { return _desc->flags & Flags::IsVoid; }
 
     /** @brief Check if type is an intergral one */
-    [[nodiscard]] bool isIntegral(void) const noexcept { return _desc->isIntegral; }
+    [[nodiscard]] bool isIntegral(void) const noexcept { return _desc->flags & Flags::IsIntegral; }
 
     /** @brief Check if type is a floating one */
-    [[nodiscard]] bool isFloating(void) const noexcept { return _desc->isFloating; }
+    [[nodiscard]] bool isFloating(void) const noexcept { return _desc->flags & Flags::IsFloating; }
 
     /** @brief Check if type is double */
-    [[nodiscard]] bool isDouble(void) const noexcept { return _desc->isDouble; }
+    [[nodiscard]] bool isDouble(void) const noexcept { return _desc->flags & Flags::IsDouble; }
+
+    /** @brief Check if type is pointer */
+    [[nodiscard]] bool isPointer(void) const noexcept { return _desc->flags & Flags::IsPointer; }
 
     /** @brief Check if type is default constructible */
     [[nodiscard]] bool isDefaultConstructible(void) const noexcept { return _desc->defaultConstructFunc; }

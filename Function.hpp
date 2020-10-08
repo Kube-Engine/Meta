@@ -16,10 +16,10 @@ public:
     using InvokeFunc = Var(*)(const void *, Var *);
     using ArgTypeFunc = Type(*)(const std::size_t) noexcept;
 
-    struct Descriptor
+    struct alignas(32) Descriptor
     {
         const HashedName name;
-        const std::size_t argsCount;
+        const std::uint16_t argsCount;
         const bool isStatic;
         const bool isConst;
         const Type returnType;
@@ -29,6 +29,8 @@ public:
         template<typename Type, auto FunctionPtr>
         static Descriptor Construct(const HashedName name) noexcept;
     };
+
+    static_assert(sizeof(Descriptor) == 32, "Function descriptor must take 32 bytes");
 
     /** @brief Construct passing a descriptor instance */
     Function(const Descriptor *desc = nullptr) noexcept : _desc(desc) {}

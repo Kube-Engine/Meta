@@ -94,9 +94,9 @@ struct kF::Meta::OpaqueFunctor
 {
     using InvokeFunc = Var(*)(Var &data, const void *receiver, Var *arguments);
 
+    Var data {};
     const void *receiver { nullptr };
     InvokeFunc invokeFunc { nullptr };
-    Var data {};
 
     /** @brief Check if the opaque functor is valid */
     operator bool(void) const noexcept { return invokeFunc != nullptr; }

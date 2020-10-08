@@ -17,10 +17,11 @@ public:
     using SetFunc = Var(*)(const void *, Var &);
 
     /** @brief Describe a meta data */
-    struct Descriptor
+    struct alignas(32) Descriptor
     {
         const HashedName name;
         const bool isStatic;
+        const char _padding[3];
         const Type type;
         const GetFunc getFunc;
         const SetFunc setFunc;
@@ -29,6 +30,8 @@ public:
         template<typename Type, auto GetFunctionPtr, auto SetFunctionPtr>
         static Descriptor Construct(const HashedName name) noexcept;
     };
+
+    static_assert(sizeof(Descriptor) == 32, "Data descriptor must take 32 bytes");
 
     /** @brief Construct passing a descriptor instance */
     Data(const Descriptor *desc = nullptr) noexcept : _desc(desc) {}

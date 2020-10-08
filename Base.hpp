@@ -19,7 +19,7 @@
 #include "Forward.hpp"
 
 #ifndef KF_META_VAR_SMALL_OPTIMIZATION_SIZE
-# define KF_META_VAR_SMALL_OPTIMIZATION_SIZE 32
+# define KF_META_VAR_SMALL_OPTIMIZATION_SIZE 16ul
 #endif
 
 namespace kF
@@ -145,15 +145,7 @@ namespace kF
 
             /** @brief Helper to know if a type is trivial or not */
             template<typename Type>
-            constexpr bool IsVarSmallOptimized = sizeof(Type) <= VarSmallOptimizationSize;
-
-            /** @brief std::enable_if alias for trivial types */
-            template<typename Type, typename Internal = void>
-            using EnableIfSmallOptimized = std::enable_if<IsVarSmallOptimized<Type>, Internal>;
-
-            /** @brief std::enable_if alias for non-trivial types */
-            template<typename Type, typename Internal = void>
-            using EnableIfNotSmallOptimized = std::enable_if<!IsVarSmallOptimized<Type>>;
+            constexpr bool IsVarSmallOptimized = ConstexprTernary((std::is_same_v<Type, void>), false, sizeof(Type) <= VarSmallOptimizationSize);
 
             /** @brief Helpers to check if an operator is avaible on a Type */
             template<typename Type> using BoolOperatorCheck = decltype(std::declval<Type>().operator bool());
@@ -196,15 +188,15 @@ namespace kF
             /** @brief Helpers used to generate opaque primitive functions */
             template<typename Type, std::enable_if_t<std::is_convertible_v<Type, bool>>* = nullptr>
             [[nodiscard]] bool MakeToBool(const void *data) noexcept_convertible(Type, bool) { return static_cast<bool>(*reinterpret_cast<const Type *>(data)); }
-            template<typename Type, std::enable_if_t<std::experimental::is_detected_exact_v<bool, BoolOperatorCheck, Type>>* = nullptr>
-            [[nodiscard]] bool MakeToBool(const void *data) noexcept_convertible(Type, bool) { return reinterpret_cast<const Type *>(data)->operator bool(); }
+            template<typename Type, std::enable_if_t<!std::is_convertible_v<Type, bool>>* = nullptr>
+            [[nodiscard]] bool MakeToBool(const void *data) noexcept_expr(std::declval<Type>().operator bool()) { return reinterpret_cast<const Type *>(data)->operator bool(); }
 
             /** @brief Helpers used to generate opaque operators functions */
-            template<typename Type, auto OperatorFunc, kF::Meta::UnaryOperator Operator>
+            template<typename Type, auto OperatorFunc, UnaryOperator Operator>
             Var MakeUnaryOperator(const void *data);
-            template<typename Type, auto OperatorFunc, kF::Meta::BinaryOperator Operator>
+            template<typename Type, auto OperatorFunc, BinaryOperator Operator>
             Var MakeBinaryOperator(const void *data, const Var &var);
-            template<typename Type, auto OperatorFunc, kF::Meta::AssignmentOperator Operator>
+            template<typename Type, auto OperatorFunc, AssignmentOperator Operator>
             void MakeAssignmentOperator(void *data, const Var &var);
 
             /** @brief Helpers to generate unary operator functions */
@@ -248,6 +240,10 @@ namespace kF
             void AssignmentAdditionPointer(Type &lhs, const std::size_t rhs) noexcept { lhs += rhs; }
             template<typename Type>
             void AssignmentSubstractionPointer(Type &lhs, const std::size_t rhs) noexcept { lhs -= rhs; }
+
+            /** @brief Helper used to forward an argument of an invoked function */
+            template<typename Type, typename ArgType>
+            auto ForwardArgument(Var *any);
 
             /** @brief Meta function invoker
              * Will perform different semantics uppon function's arguments

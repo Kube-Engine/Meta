@@ -13,7 +13,7 @@ public:
     using InvokeFunc = bool(*)(void *, Var *);
     using ArgTypeFunc = Type(*)(const std::size_t) noexcept;
 
-    struct Descriptor
+    struct alignas(32) Descriptor
     {
         const std::size_t argsCount;
         const ArgTypeFunc argTypeFunc;
@@ -23,6 +23,8 @@ public:
         template<typename Type, typename ...Args> requires std::constructible_from<Type, Args...>
         static Descriptor Construct(void) noexcept;
     };
+
+    static_assert(sizeof(Descriptor) == 32, "Constructor descriptor take 32 bytes");
 
     /** @brief Construct passing a descriptor instance */
     Constructor(const Descriptor *desc = nullptr) noexcept : _desc(desc) {}

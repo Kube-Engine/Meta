@@ -31,12 +31,12 @@ inline kF::Var kF::Meta::Constructor::invoke(Args &&...args) const
     auto returnType = type();
 
     if (returnType.isSmallOptimized()) {
-        var.reserve<true, false>(returnType);
-        if (!invoke(var.data<true>(), std::forward<Args>(args)...))
+        var.reserve<Var::UseSmallOptimization::Yes, Var::ShouldDestructInstance::No>(returnType);
+        if (!invoke(var.data<Var::UseSmallOptimization::Yes>(), std::forward<Args>(args)...))
             return Var();
     } else {
-        var.reserve<false, false>(returnType);
-        if (!invoke(var.data<false>(), std::forward<Args>(args)...))
+        var.reserve<Var::UseSmallOptimization::No, Var::ShouldDestructInstance::No>(returnType);
+        if (!invoke(var.data<Var::UseSmallOptimization::No>(), std::forward<Args>(args)...))
             return Var();
     }
     return var;

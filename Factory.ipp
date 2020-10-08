@@ -18,7 +18,7 @@ void kF::Meta::FactoryBase<Type>::RegisterBase(void) noexcept_ndebug
 {
     kFAssert(!Meta::Type(&GetDescriptor()).findBase(FactoryBase<Base>::Resolve()),
         throw std::logic_error("Factory::RegisterBase: Base already registered"));
-    GetDescriptor().bases.emplace_back(FactoryBase<Base>::Resolve());
+    GetDescriptor().bases.push(FactoryBase<Base>::Resolve());
 }
 
 template<typename Type>
@@ -29,7 +29,7 @@ void kF::Meta::FactoryBase<Type>::RegisterConstructor(void) noexcept_ndebug
 
     kFAssert(!Meta::Type(&GetDescriptor()).findConstructor<Args...>(),
         throw std::logic_error("Factory::RegisterConstructor: Constructor already registered"));
-    GetDescriptor().constructors.emplace_back(&descriptor);
+    GetDescriptor().constructors.push(&descriptor);
 }
 
 template<typename Type>
@@ -58,7 +58,7 @@ void kF::Meta::FactoryBase<Type>::RegisterConverter(void) noexcept_ndebug
 
     kFAssert(!Meta::Type(&GetDescriptor()).findConverter(FactoryBase<To>::Resolve()),
         throw std::logic_error("Factory::RegisterConverter: Converter already registered"));
-    GetDescriptor().converters.emplace_back(&descriptor);
+    GetDescriptor().converters.push(&descriptor);
 }
 
 template<typename Type>
@@ -69,7 +69,7 @@ void kF::Meta::FactoryBase<Type>::RegisterFunction(const HashedName name) noexce
 
     kFAssert(!Meta::Type(&GetDescriptor()).findFunction(name),
         throw std::logic_error("Factory::RegisterFunction: Function already registered"));
-    GetDescriptor().functions.emplace_back(&descriptor);
+    GetDescriptor().functions.push(&descriptor);
 }
 
 template<typename Type>
@@ -80,7 +80,7 @@ void kF::Meta::FactoryBase<Type>::RegisterData(const HashedName name) noexcept_n
 
     kFAssert(!Meta::Type(&GetDescriptor()).findData(name),
         throw std::logic_error("Factory::RegisterData: Data already registered"));
-    GetDescriptor().datas.emplace_back(&descriptor);
+    GetDescriptor().datas.push(&descriptor);
 }
 
 template<typename Type>
@@ -91,5 +91,5 @@ void kF::Meta::FactoryBase<Type>::RegisterSignal(const HashedName name) noexcept
 
     kFAssert(!Meta::Type(&GetDescriptor()).findSignal<SignalPtr>(),
         throw std::logic_error("Factory::RegisterSignal: Signal already registered"));
-    GetDescriptor().signals.emplace_back(&descriptor);
+    GetDescriptor().signals.push(&descriptor);
 }

@@ -16,7 +16,7 @@ public:
     using ConvertSignature = Var(*)(const void *);
 
     /** @brief Describe a meta converter */
-    struct Descriptor
+    struct alignas(16) Descriptor
     {
         const Type convertType;
         const ConvertSignature convertFunc;
@@ -25,6 +25,8 @@ public:
         template<typename Type, ConvertSignature FunctionPtr>
         static Descriptor Construct(void) noexcept;
     };
+
+    static_assert(sizeof(Descriptor) == 16, "Constructor descriptor must take 16 bytes");
 
     /** @brief Construct passing a descriptor instance */
     Converter(const Descriptor *desc = nullptr) noexcept : _desc(desc) {}

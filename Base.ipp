@@ -85,12 +85,26 @@ kF::Var kF::Meta::Internal::MakeBinaryOperator(const void *data, const Var &var)
         return Var::Emplace<Type>((*OperatorFunc)(*reinterpret_cast<const Type *>(data), var.directConvert<Type>()));
     // If the type is floating, we must convert opaque operand to either float or double builtin type
     else if (var.type().isFloating()) {
-        Var tmp;
+        constexpr auto compute = [](const auto &lhs, const auto &rhs) noexcept {
+            switch (Operator) {
+            case BinaryOperator::Addition:
+                return Internal::BinaryAddition(lhs, rhs);
+            case BinaryOperator::Substraction:
+                return Internal::BinarySubstraction(lhs, rhs);
+            case BinaryOperator::Multiplication:
+                return Internal::BinaryMultiplication(lhs, rhs);
+            case BinaryOperator::Division:
+                return Internal::BinaryDivision(lhs, rhs);
+            case BinaryOperator::Modulo:
+                return Internal::BinaryModulo(lhs, rhs);
+            default:
+                return decltype(lhs){};
+            }
+        };
         if (var.type().isDouble())
-            tmp.emplace<double, false>(static_cast<double>(*reinterpret_cast<const Type *>(data)));
+            return Var::Emplace<double>(compute(static_cast<double>(*reinterpret_cast<const Type *>(data)), var.as<double>()));
         else
-            tmp.emplace<float, false>(static_cast<float>(*reinterpret_cast<const Type *>(data)));
-        return tmp.type().invokeOperator<Operator>(tmp.data(), var);
+            return Var::Emplace<float>(compute(static_cast<float>(*reinterpret_cast<const Type *>(data)), var.as<float>()));
     // Else, tries to convert the opaque variable to Type
     } else
         return Var::Emplace<Type>((*OperatorFunc)(*reinterpret_cast<const Type *>(data), var.directConvert<Type>()));
@@ -108,55 +122,69 @@ void kF::Meta::Internal::MakeAssignmentOperator(void *data, const Var &var)
     // If the type is either a float or NOT an integral, we can try to convert the opaque variable to Type without further check
     else if constexpr (std::is_floating_point_v<Type> || !std::is_integral_v<Type>)
         return (*OperatorFunc)(*reinterpret_cast<Type *>(data), var.directConvert<Type>());
-    // If the type is floating, we must convert opaque operand to either float or double builtin type
-    else if (var.type().isFloating()) { //
-        Var tmp;
+    // If the left operand is integral and right operand is floating, we must compute the expression differently
+    else if (var.type().isFloating()) {
+        constexpr auto compute = [](auto &lhs, const auto &rhs) noexcept {
+            switch (Operator) {
+            case AssignmentOperator::Addition:
+                return Internal::AssignmentAddition(lhs, rhs);
+            case AssignmentOperator::Substraction:
+                return Internal::AssignmentSubstraction(lhs, rhs);
+            case AssignmentOperator::Multiplication:
+                return Internal::AssignmentMultiplication(lhs, rhs);
+            case AssignmentOperator::Division:
+                return Internal::AssignmentDivision(lhs, rhs);
+            case AssignmentOperator::Modulo:
+                return Internal::AssignmentModulo(lhs, rhs);
+            default:
+                return;
+            }
+        };
         if (var.type().isDouble()) {
-            tmp.emplace<double, false>(static_cast<double>(*reinterpret_cast<const Type *>(data)));
-            tmp.type().invokeOperator<Operator>(tmp.data(), var);
-            auto res = static_cast<Type>(tmp.as<double>());
-            return Factory<Type>::Resolve().copyAssign(data, &res);
+            double tmp = static_cast<double>(*reinterpret_cast<const Type *>(data));
+            compute(tmp, var.as<double>());
+            *reinterpret_cast<Type *>(data) = static_cast<Type>(tmp);
         } else {
-            tmp.emplace<float, false>(static_cast<float>(*reinterpret_cast<const Type *>(data)));
-            tmp.type().invokeOperator<Operator>(tmp.data(), var);
-            auto res = static_cast<Type>(tmp.as<float>());
-            return Factory<Type>::Resolve().copyAssign(data, &res);
+            float tmp = static_cast<float>(*reinterpret_cast<const Type *>(data));
+            compute(tmp, var.as<float>());
+            *reinterpret_cast<Type *>(data) = static_cast<Type>(tmp);
         }
-    // Else, tries to convert the opaque variable to Type
+    // Else, tries to convert the integeropaque variable to Type
     } else
         return (*OperatorFunc)(*reinterpret_cast<Type *>(data), var.directConvert<Type>());
 }
 
-template<typename Type, auto FunctionPtr, typename Decomposer, std::size_t ...Indexes>
-kF::Var kF::Meta::Internal::Invoke(const void *instance, Var *args, const std::index_sequence<Indexes...> &sequence)
+template<typename Type, typename ArgType>
+inline auto kF::Meta::Internal::ForwardArgument(Var *any)
 {
-    using FunctionPtrType = decltype(FunctionPtr);
+    using FlatArgType = std::remove_cvref_t<ArgType>;
 
-    constexpr auto Direct = [](Var *any, auto holder) {
-        using ArgType = typename decltype(holder)::Type;
-        using FlatArgType = std::remove_cvref_t<ArgType>;
-
-        if constexpr (std::is_rvalue_reference_v<ArgType>) {
-            if constexpr (std::is_same_v<FlatArgType, Var>)
-                return std::move(*any);
-            else
-                return std::move(any->cast<FlatArgType>());
-        } else if constexpr (std::is_lvalue_reference_v<ArgType>) {
-            if constexpr (std::is_same_v<FlatArgType, Var>)
-                return Var::Assign(*any);
-            else if constexpr (!std::is_const_v<std::remove_reference_t<ArgType>>)
-                return any->cast<FlatArgType>();
-            else if (any->isCastAble<FlatArgType>())
-                return any->as<FlatArgType>();
-            else
-                return any->directConvert<FlatArgType>();
-        } else if constexpr (std::is_same_v<FlatArgType, Var>)
+    if constexpr (std::is_rvalue_reference_v<ArgType>) {
+        if constexpr (std::is_same_v<FlatArgType, Var>)
             return std::move(*any);
-        else if (any->isCastAble<ArgType>())
-            return any->storageType() == Var::StorageType::Value ? std::move(any->as<FlatArgType>()) : any->as<FlatArgType>();
+        else
+            return std::move(any->cast<FlatArgType>());
+    } else if constexpr (std::is_lvalue_reference_v<ArgType>) {
+        if constexpr (std::is_same_v<FlatArgType, Var>)
+            return Var::Assign(*any);
+        else if constexpr (!std::is_const_v<std::remove_reference_t<ArgType>>)
+            return any->cast<FlatArgType>();
+        else if (any->isCastAble<FlatArgType>())
+            return any->as<FlatArgType>();
         else
             return any->directConvert<FlatArgType>();
-    };
+    } else if constexpr (std::is_same_v<FlatArgType, Var>)
+        return std::move(*any);
+    else if (any->isCastAble<ArgType>())
+        return any->storageType() == Var::StorageType::Value ? std::move(any->as<FlatArgType>()) : any->as<FlatArgType>();
+    else
+        return any->directConvert<FlatArgType>();
+}
+
+template<typename Type, auto FunctionPtr, typename Decomposer, std::size_t ...Indexes>
+inline kF::Var kF::Meta::Internal::Invoke(const void *instance, Var *args, const std::index_sequence<Indexes...> &sequence)
+{
+    using FunctionPtrType = decltype(FunctionPtr);
 
     constexpr auto Dispatch = [](auto &&args) {
         if constexpr (std::is_same_v<typename Decomposer::ReturnType, void>) {
@@ -169,47 +197,21 @@ kF::Var kF::Meta::Internal::Invoke(const void *instance, Var *args, const std::i
     if constexpr (Decomposer::IsFunctor || !Decomposer::IsMember)
         return Dispatch(
             std::forward_as_tuple(
-                Direct(args + Indexes, TypeHolder<std::tuple_element_t<Indexes, typename Decomposer::ArgsTuple>>())...
+                ForwardArgument<Type, std::tuple_element_t<Indexes, typename Decomposer::ArgsTuple>>(args + Indexes)...
             )
         );
     else
         return Dispatch(
             std::forward_as_tuple(
                 const_cast<Type *>(reinterpret_cast<const Type *>(instance)),
-                Direct(args + Indexes, TypeHolder<std::tuple_element_t<Indexes, typename Decomposer::ArgsTuple>>())...
+                ForwardArgument<Type, std::tuple_element_t<Indexes, typename Decomposer::ArgsTuple>>(args + Indexes)...
             )
         );
 }
 
 template<typename Type, typename Decomposer, typename Functor, std::size_t ...Indexes>
-kF::Var kF::Meta::Internal::Invoke(Functor &functor, [[maybe_unused]] const void *instance, Var *args, const std::index_sequence<Indexes...> &sequence)
+inline kF::Var kF::Meta::Internal::Invoke(Functor &functor, [[maybe_unused]] const void *instance, Var *args, const std::index_sequence<Indexes...> &sequence)
 {
-    constexpr auto Direct = [](Var *any, auto holder) {
-        using ArgType = typename decltype(holder)::Type;
-        using FlatArgType = std::remove_cvref_t<ArgType>;
-
-        if constexpr (std::is_rvalue_reference_v<ArgType>) {
-            if constexpr (std::is_same_v<FlatArgType, Var>)
-                return std::move(*any);
-            else
-                return std::move(any->cast<FlatArgType>());
-        } else if constexpr (std::is_lvalue_reference_v<ArgType>) {
-            if constexpr (std::is_same_v<FlatArgType, Var>)
-                return Var::Assign(*any);
-            else if constexpr (!std::is_const_v<std::remove_reference_t<ArgType>>)
-                return any->cast<FlatArgType>();
-            else if (any->isCastAble<FlatArgType>())
-                return any->as<FlatArgType>();
-            else
-                return any->directConvert<FlatArgType>();
-        } else if constexpr (std::is_same_v<FlatArgType, Var>)
-            return std::move(*any);
-        else if (any->isCastAble<ArgType>())
-            return any->storageType() == Var::StorageType::Value ? std::move(any->as<FlatArgType>()) : any->as<FlatArgType>();
-        else
-            return any->directConvert<FlatArgType>();
-    };
-
     constexpr auto Dispatch = [](auto &&functor, auto &&args) {
         if constexpr (std::is_same_v<typename Decomposer::ReturnType, void>) {
             std::apply(functor, std::forward<decltype(args)>(args));
@@ -222,7 +224,7 @@ kF::Var kF::Meta::Internal::Invoke(Functor &functor, [[maybe_unused]] const void
         return Dispatch(
             std::forward<Functor>(functor),
             std::forward_as_tuple(
-                Direct(args + Indexes, TypeHolder<std::tuple_element_t<Indexes, typename Decomposer::ArgsTuple>>())...
+                ForwardArgument<Type, std::tuple_element_t<Indexes, typename Decomposer::ArgsTuple>>(args + Indexes)...
             )
         );
     else
@@ -230,7 +232,7 @@ kF::Var kF::Meta::Internal::Invoke(Functor &functor, [[maybe_unused]] const void
             std::forward<Functor>(functor),
             std::forward_as_tuple(
                 const_cast<Type *>(reinterpret_cast<const Type *>(instance)),
-                Direct(args + Indexes, TypeHolder<std::tuple_element_t<Indexes, typename Decomposer::ArgsTuple>>())...
+                ForwardArgument<Type, std::tuple_element_t<Indexes, typename Decomposer::ArgsTuple>>(args + Indexes)...
             )
         );
 }

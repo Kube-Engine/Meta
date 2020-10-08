@@ -15,7 +15,7 @@
  * It can hold a value, a reference or a rvalue reference.
  * Value that are <= to size of a pointer are cheaply copied.
  */
-class kF::Var
+class alignas(kF::Meta::Internal::VarSmallOptimizationSize > 16ul ? 64ul : 32ul) kF::Var
 {
 public:
     /**
@@ -24,7 +24,7 @@ public:
      * Value and ValueOptimized are for copied or moved instances
      * ReferenceVolatile and ReferenceConstant are for assigned references
      */
-    enum class StorageType : std::size_t {
+    enum class StorageType : std::uint32_t {
         Undefined,
         Value,
         ValueOptimized,
@@ -38,61 +38,77 @@ public:
         std::byte memory[Meta::Internal::VarSmallOptimizationSize];
     };
 
+    /** @brief A bunch of enum helpers for better template readability */
+    enum class UseSmallOptimization     : bool { No = false, Yes = true };
+    enum class ShouldResetMembers       : bool { No = false, Yes = true };
+    enum class ShouldCheckIfAssignable  : bool { No = false, Yes = true };
+    enum class ShouldDestructInstance   : bool { No = false, Yes = true };
+
     /** @brief Assigns a type value to a Var */
     template<typename Type>
-    static Var Assign(Type &&type) { Var tmp; tmp.assign<Type, false>(std::forward<Type>(type)); return tmp; }
+    static Var Assign(Type &&type)
+        { Var tmp; tmp.assign<Type, ShouldDestructInstance::No>(std::forward<Type>(type)); return tmp; }
 
     /** @brief Emplaces a type value to a Var */
     template<typename Type, typename ...Args>
-    static Var Emplace(Args &&...args) { Var tmp; tmp.emplace<Type, false>(std::forward<Args>(args)...); return tmp; }
+    static Var Emplace(Args &&...args)
+        { Var tmp; tmp.emplace<Type, ShouldDestructInstance::No>(std::forward<Args>(args)...); return tmp; }
 
     /** @brief Emplaces a type value to a Var */
     template<typename ...Args>
-    static Var Construct(const HashedName name, Args &&...args) { Var tmp; tmp.construct(name, std::forward<Args>(args)...); return tmp; }
+    static Var Construct(const HashedName name, Args &&...args)
+        { Var tmp; tmp.construct<ShouldDestructInstance::No>(name, std::forward<Args>(args)...); return tmp; }
 
     /** @brief Default constructor, instance is empty */
     Var(void) noexcept = default;
 
     /** @brief Copy constructor, deep copy ! */
-    Var(const Var &other) { deepCopy<false>(other); }
+    Var(const Var &other) { deepCopy<ShouldCheckIfAssignable::No, ShouldDestructInstance::No>(other); }
 
     /** @brief Move constructor */
-    Var(Var &&other);
+    Var(Var &&other) { move<ShouldDestructInstance::No>(other); }
 
     /** @brief Emplace constructor */
     template<typename Type, std::enable_if_t<!std::is_same_v<std::remove_cvref_t<Type>, Var>>* = nullptr>
-    Var(Type &&value) noexcept_constructible(Type) { emplace<std::remove_cvref_t<Type>, false>(std::forward<Type>(value)); }
+    Var(Type &&value)
+        noexcept_constructible(std::remove_cvref_t<Type>, Type)
+        { emplace<std::remove_cvref_t<Type>, ShouldDestructInstance::No>(std::forward<Type>(value)); }
 
     /** @brief If not empty, will destruct the internal value */
-    ~Var(void) { destruct<false>(); }
+    ~Var(void) { release<ShouldResetMembers::No>(); }
 
     /** @brief Copy assignment, deep copy ! */
-    Var &operator=(const Var &other) { deepCopy<true>(other); return *this; }
+    Var &operator=(const Var &other) { deepCopy<ShouldCheckIfAssignable::Yes, ShouldDestructInstance::No>(other); return *this; }
 
-    /** @brief Move assignment */
-    Var &operator=(Var &&other);
+    /** @brief Move assignment, either call constructor or move pointers if not small optimized */
+    Var &operator=(Var &&other) { move<ShouldDestructInstance::Yes>(other); return *this; }
+
+    /** @brief Destruct the instance and its internal memory */
+    template<ShouldResetMembers ResetMembers = ShouldResetMembers::Yes>
+    void release(void);
 
     /** @brief Checks if the instance is not empty */
     [[nodiscard]] explicit operator bool(void) const noexcept { return _type.operator bool(); }
 
     /** @brief Assigns a variable internally */
-    template<typename Type, bool DestructInstance = true>
+    template<typename Type, ShouldDestructInstance DestructInstance = ShouldDestructInstance::Yes>
     void assign(Type &&other);
 
     /** @brief Deep copy another variable */
-    template<bool CheckIfAssignable = true>
+    template<ShouldCheckIfAssignable CheckIfAssignable = ShouldCheckIfAssignable::Yes, ShouldDestructInstance DestructInstance = ShouldDestructInstance::Yes>
     void deepCopy(const Var &other);
 
     /** @brief Emplaces a type into the current instance */
-    template<typename Type, bool DestructInstance = true, typename ...Args>
-    void emplace(Args &&...args) noexcept(!DestructInstance && nothrow_constructible(Type, Args...));
+    template<typename Type, ShouldDestructInstance DestructInstance = ShouldDestructInstance::Yes, typename ...Args>
+    void emplace(Args &&...args)
+        noexcept(DestructInstance == ShouldDestructInstance::No && nothrow_constructible(Type, Args...));
 
     /** @brief Construct semantic */
-    template<bool DestructInstance = true, typename ...Args>
+    template<ShouldDestructInstance DestructInstance = ShouldDestructInstance::Yes, typename ...Args>
     void construct(const HashedName name, Args &&...args);
 
     /** @brief Release internal type */
-    template<bool ResetMembers = true>
+    template<ShouldResetMembers ResetMembers = ShouldResetMembers::Yes>
     void destruct(void);
 
     /** @brief Get internal type */
@@ -111,16 +127,12 @@ public:
     [[nodiscard]] bool isVoid(void) const noexcept { return _type.isVoid(); }
 
     /** @brief Retreive opaque internal data */
-    [[nodiscard]] void *data(void) const noexcept { return isSmallOptimizedValue() ? data<true>() : data<false>(); }
+    [[nodiscard]] void *data(void) const noexcept
+        { return isSmallOptimizedValue() ? data<UseSmallOptimization::Yes>() : data<UseSmallOptimization::No>(); }
 
     /** @brief Retreive opaque internal data knowing small optimization state at compile time */
-    template<bool IsSmallOptimized>
-    [[nodiscard]] void *data(void) const noexcept {
-        if constexpr (IsSmallOptimized)
-            return const_cast<void *>(reinterpret_cast<const void *>(&_data.memory));
-        else
-            return const_cast<void *>(_data.ptr);
-    }
+    template<UseSmallOptimization IsSmallOptimized>
+    [[nodiscard]] void *data(void) const noexcept;
 
     /** @brief Retreive internal type as given Type reference (unsafe) */
     template<typename Type>
@@ -142,7 +154,8 @@ public:
 
     /** @brief Check if internal is castable to given type */
     template<typename Type>
-    [[nodiscard]] bool isCastAble(void) const noexcept { return _type.typeID() == typeid(Type) || type().findBase(Meta::Factory<Type>::Resolve()); }
+    [[nodiscard]] bool isCastAble(void) const noexcept
+        { return _type.typeID() == typeid(Type) || type().findBase(Meta::Factory<Type>::Resolve()); }
 
     /** @brief Tries to convert internal instance to given meta type name */
     [[nodiscard]] Var convert(const Meta::Type type) const;
@@ -172,7 +185,8 @@ public:
 
     /** @brief Various non-opaque operators helpers */
     template<typename Type>
-    [[nodiscard]] bool operator==(const Type &rhs) const noexcept { return type() == Meta::Factory<Type>::Resolve() ? as<Type>() == rhs : false; }
+    [[nodiscard]] bool operator==(const Type &rhs) const noexcept
+        { return type() == Meta::Factory<Type>::Resolve() ? as<Type>() == rhs : false; }
     template<typename Type>
     [[nodiscard]] bool operator!=(const Type &rhs) const noexcept { return !operator==(rhs); }
 
@@ -183,20 +197,30 @@ public:
      * This function makes access to the instance unsafe
      * You must construct the type manually before trying to use the instance
      */
-    template<bool DestructInstance>
+    template<ShouldDestructInstance DestructInstance = ShouldDestructInstance::Yes>
     void reserve(const Meta::Type type) noexcept_ndebug;
 
-    /**
-     * @brief Same as 'reserve' but with compile time knowledge of type triviallity
-     */
-    template<bool IsSmallOptimized, bool DestructInstance>
+    /** @brief Same as 'reserve' but with compile time knowledge of type triviallity */
+    template<UseSmallOptimization IsSmallOptimized, ShouldDestructInstance DestructInstance>
     void reserve(const Meta::Type type) noexcept_ndebug;
 
 private:
     Meta::Type _type {};
     StorageType _storageType { StorageType::Undefined };
+    std::uint32_t _capacity { 0 };
     Cache _data;
 
     /** @brief Unsafe reference getter used internally */
     [[nodiscard]] void *&dataRef(void) noexcept { return _data.ptr; }
+
+    /** @brief Move helper */
+    template<ShouldDestructInstance DestructInstance = ShouldDestructInstance::Yes>
+    void move(Var &other);
+
+    /** @brief Allocate a given capacity on the heap */
+    void alloc(const std::uint32_t capacity) noexcept_ndebug;
+
+    /** @brief Release the current allocation if there is any */
+    template<ShouldDestructInstance DestructInstance>
+    void releaseAlloc(void) noexcept;
 };

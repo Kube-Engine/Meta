@@ -3,33 +3,18 @@
  * @ Description: Variable
  */
 
-inline kF::Var::Var(Var &&other)
+template<kF::Var::ShouldResetMembers ResetMembers>
+inline void kF::Var::release(void)
 {
-    if (other.isSmallOptimizedValue()) {
-        reserve<true, false>(other.type());
-        other.type().moveConstruct(data<true>(), other.data<true>());
-    } else {
-        std::swap(_type, other._type);
-        std::swap(_storageType, other._storageType);
-        std::swap(other.dataRef(), dataRef());
+    destruct<ResetMembers>();
+    if (_capacity) {
+        std::free(dataRef());
+        if constexpr (ResetMembers == ShouldResetMembers::Yes)
+            _capacity = 0u;
     }
 }
 
-inline kF::Var &kF::Var::operator=(Var &&other)
-{
-    if (other.isSmallOptimizedValue()) {
-        destruct<true>();
-        reserve<true, false>(other.type());
-        other.type().moveConstruct(data<true>(), other.data<true>());
-    } else {
-        std::swap(_type, other._type);
-        std::swap(_storageType, other._storageType);
-        std::swap(other.dataRef(), dataRef());
-    }
-    return *this;
-}
-
-template<typename Type, bool DestructInstance>
+template<typename Type, kF::Var::ShouldDestructInstance DestructInstance>
 inline void kF::Var::assign(Type &&other)
 {
     using DirectType = decltype(other);
@@ -37,19 +22,24 @@ inline void kF::Var::assign(Type &&other)
 
     constexpr bool IsConst = std::is_const_v<std::remove_reference_t<DirectType>>;
 
-    if constexpr (DestructInstance)
-        destruct<false>();
+    if constexpr (DestructInstance == ShouldDestructInstance::Yes)
+        destruct<ShouldResetMembers::No>();
     if constexpr (std::is_same_v<FlatType, Var>) {
-        if constexpr (!std::is_lvalue_reference_v<DirectType>)
-            *this = std::move(other);
-        else if constexpr (IsConst)
-            dataRef() = const_cast<void *>(other.data());
-        else
-            dataRef() = other.data();
-        _type = other._type;
+        if constexpr (!std::is_lvalue_reference_v<DirectType>) {
+            move(other);
+            return;
+        } else {
+            releaseAlloc<DestructInstance>();
+            if constexpr (IsConst)
+                dataRef() = const_cast<void *>(other.data());
+            else
+                dataRef() = other.data();
+        }
+        _type = other.type();
     } else if constexpr (!std::is_lvalue_reference_v<DirectType>)
-        return emplace<FlatType, false>(std::move(other));
+        return emplace<FlatType, ShouldDestructInstance::No>(std::move(other));
     else {
+        releaseAlloc<DestructInstance>();
         if constexpr (IsConst)
             dataRef() = const_cast<void *>(reinterpret_cast<const void *>(&other));
         else
@@ -59,46 +49,61 @@ inline void kF::Var::assign(Type &&other)
     _storageType = ConstexprTernary(IsConst, StorageType::ReferenceConstant, StorageType::ReferenceVolatile);
 }
 
-template<bool CheckIfAssignable>
+template<kF::Var::ShouldCheckIfAssignable CheckIfAssignable, kF::Var::ShouldDestructInstance DestructInstance>
 inline void kF::Var::deepCopy(const Var &other)
 {
-    bool assigned = false;
-
-    if constexpr (CheckIfAssignable)
-        if (*this && type().typeID() == other.type().typeID()) {
-            kFAssert(other.type().isCopyAssignable(),
-                throw std::runtime_error("Var::deepCopy: Copy assignment is not supported"));
-            other.type().copyAssign(data(), const_cast<void *>(other.data()));
-            _type = other.type();
-            _storageType = type().isSmallOptimized() ? StorageType::ValueOptimized : StorageType::Value;
+    if (!other) [[unlikely]] {
+        destruct<ShouldResetMembers::Yes>();
+        return;
+    }
+    const auto otherType = other.type();
+    kFAssert(otherType.isCopyAssignable(),
+        throw std::runtime_error("Var::deepCopy: Copy construct is not supported on type"));
+    if constexpr (CheckIfAssignable == ShouldCheckIfAssignable::Yes) {
+        if (*this && type().typeID() == otherType.typeID()) {
+            if (otherType.isSmallOptimized()) {
+                otherType.copyAssign(data<UseSmallOptimization::Yes>(), const_cast<void *>(other.data()));
+                _storageType = StorageType::ValueOptimized;
+            } else {
+                otherType.copyAssign(data<UseSmallOptimization::No>(), const_cast<void *>(other.data()));
+                _storageType = StorageType::Value;
+            }
             return;
         }
-    kFAssert(other._type.isCopyAssignable(),
-        throw std::runtime_error("Var::deepCopy: Copy construct is not supported"));
-    *this = other.type().copyConstruct(const_cast<void *>(other.data()));
-}
-
-template<typename UnarrangedType, bool DestructInstance, typename ...Args>
-inline void kF::Var::emplace(Args &&...args) noexcept(!DestructInstance && nothrow_constructible(UnarrangedType, Args...))
-{
-    using Type = typename Meta::Internal::ArrangeType<UnarrangedType>::Type;
-
-    if constexpr (DestructInstance)
-        destruct<false>();
-    _type = Meta::Factory<Type>::Resolve();
-    if constexpr (std::is_same_v<Type, void>) {
-        _storageType = StorageType::Undefined;
-    } else if constexpr (Meta::Internal::IsVarSmallOptimized<Type>) {
-        _storageType = StorageType::ValueOptimized;
-        new (data<true>()) Type(std::forward<Args>(args)...);
+    }
+    if (otherType.isSmallOptimized()) {
+        reserve<UseSmallOptimization::Yes, DestructInstance>(otherType);
+        other.type().copyConstruct(data<UseSmallOptimization::Yes>(), const_cast<void *>(other.data()));
     } else {
-        _storageType = StorageType::Value;
-        dataRef() = std::malloc(sizeof(Type));
-        new (data<false>()) Type(std::forward<Args>(args)...);
+        reserve<UseSmallOptimization::No, DestructInstance>(otherType);
+        otherType.copyConstruct(data<UseSmallOptimization::No>(), const_cast<void *>(other.data()));
     }
 }
 
-template<bool DestructInstance, typename ...Args>
+template<typename UnarrangedType, kF::Var::ShouldDestructInstance DestructInstance, typename ...Args>
+inline void kF::Var::emplace(Args &&...args)
+    noexcept(DestructInstance == kF::Var::ShouldDestructInstance::No && nothrow_constructible(UnarrangedType, Args...))
+{
+    using Type = typename Meta::Internal::ArrangeType<UnarrangedType>::Type;
+
+    if constexpr (DestructInstance == ShouldDestructInstance::Yes)
+        destruct<ShouldResetMembers::No>();
+    _type = Meta::Factory<Type>::Resolve();
+    if constexpr (std::is_same_v<Type, void>) {
+        _storageType = StorageType::Undefined;
+        releaseAlloc<DestructInstance>();
+    } else if constexpr (Meta::Internal::IsVarSmallOptimized<Type>) {
+        _storageType = StorageType::ValueOptimized;
+        releaseAlloc<DestructInstance>();
+        new (data<UseSmallOptimization::Yes>()) Type(std::forward<Args>(args)...);
+    } else {
+        _storageType = StorageType::Value;
+        alloc(sizeof(Type));
+        new (data<UseSmallOptimization::No>()) Type(std::forward<Args>(args)...);
+    }
+}
+
+template<kF::Var::ShouldDestructInstance DestructInstance, typename ...Args>
 inline void kF::Var::construct(const HashedName name, Args &&...args)
 {
     auto type = Meta::Resolver::FindType(name);
@@ -107,11 +112,11 @@ inline void kF::Var::construct(const HashedName name, Args &&...args)
         throw std::runtime_error("Var::construct: Unknown type name"));
     void *ptr;
     if (type.isSmallOptimized()) {
-        reserve<true, DestructInstance>(type);
-        ptr = data<true>();
+        reserve<UseSmallOptimization::Yes, DestructInstance>(type);
+        ptr = data<UseSmallOptimization::Yes>();
     } else {
-        reserve<false, DestructInstance>(type);
-        ptr = data<false>();
+        reserve<UseSmallOptimization::No, DestructInstance>(type);
+        ptr = data<UseSmallOptimization::No>();
     }
     if constexpr (sizeof...(Args) == 0) {
         kFAssert(_type.isDefaultConstructible(),
@@ -131,26 +136,34 @@ inline void kF::Var::construct(const HashedName name, Args &&...args)
         throw std::runtime_error("Custom constructors not handled now");
 }
 
-template<bool ResetMembers>
+template<kF::Var::ShouldResetMembers ResetMembers>
 inline void kF::Var::destruct(void)
 {
     if (!_type) [[unlikely]]
         return;
     switch (_storageType) {
     case StorageType::Value:
-        _type.destruct(data<false>());
-        std::free(data<false>());
+        _type.destruct(data<UseSmallOptimization::No>());
         break;
     case StorageType::ValueOptimized:
-        _type.destruct(data<true>());
+        _type.destruct(data<UseSmallOptimization::Yes>());
         break;
     default:
         break;
     }
-    if constexpr (ResetMembers) {
+    if constexpr (ResetMembers == ShouldResetMembers::Yes) {
         _type = Meta::Type();
         _storageType = StorageType::Undefined;
     }
+}
+
+template<kF::Var::UseSmallOptimization IsSmallOptimized>
+inline void *kF::Var::data(void) const noexcept
+{
+    if constexpr (IsSmallOptimized == UseSmallOptimization::Yes)
+        return const_cast<void *>(reinterpret_cast<const void *>(&_data.memory));
+    else
+        return const_cast<void *>(_data.ptr);
 }
 
 template<typename Type>
@@ -288,25 +301,71 @@ inline kF::Var &kF::Var::operator%=(const Var &rhs)
     return *this;
 }
 
-template<bool DestructInstance>
+template<kF::Var::ShouldDestructInstance DestructInstance>
+inline void kF::Var::move(Var &other)
+{
+    if (other.isSmallOptimizedValue()) {
+        reserve<UseSmallOptimization::Yes, DestructInstance>(other.type());
+        other.type().moveConstruct(data<UseSmallOptimization::Yes>(), other.data<UseSmallOptimization::Yes>());
+    } else {
+        if constexpr (DestructInstance == ShouldDestructInstance::Yes) {
+            destruct<ShouldResetMembers::Yes>();
+            releaseAlloc<DestructInstance>();
+        }
+        _type = other._type;
+        _storageType = other._storageType;
+        _capacity = other._capacity;
+        dataRef() = other.dataRef();
+        other._type = Meta::Type();
+        other._storageType = StorageType::Undefined;
+        other._capacity = 0;
+    }
+}
+
+template<kF::Var::ShouldDestructInstance DestructInstance>
 inline void kF::Var::reserve(const Meta::Type type) noexcept_ndebug
 {
     if (type.isSmallOptimized())
-        reserve<true, DestructInstance>(type);
+        reserve<UseSmallOptimization::Yes, DestructInstance>(type);
     else
-        reserve<false, DestructInstance>(type);
+        reserve<UseSmallOptimization::No, DestructInstance>(type);
 }
 
-template<bool IsSmallOptimized, bool DestructInstance>
+template<kF::Var::UseSmallOptimization IsSmallOptimized, kF::Var::ShouldDestructInstance DestructInstance>
 inline void kF::Var::reserve(const Meta::Type type) noexcept_ndebug
 {
+    if constexpr (DestructInstance == ShouldDestructInstance::Yes)
+        destruct<ShouldResetMembers::No>();
     _type = type;
-    if constexpr (IsSmallOptimized)
+    if constexpr (IsSmallOptimized == UseSmallOptimization::Yes) {
+        releaseAlloc<DestructInstance>();
         _storageType = StorageType::ValueOptimized;
-    else {
+    } else {
         _storageType = StorageType::Value;
-        dataRef() = std::malloc(_type.typeSize());
-        kFAssert(data<false>() != nullptr,
-            throw std::runtime_error("Var::reserve: Memory exhausted"));
+        alloc(type.typeSize());
+    }
+}
+
+inline void kF::Var::alloc(const std::uint32_t capacity) noexcept_ndebug
+{
+    if (_capacity < capacity) [[likely]] {
+        if (_capacity) [[unlikely]]
+            std::free(data<UseSmallOptimization::No>());
+        dataRef() = std::malloc(type().typeSize());
+        _capacity = capacity;
+        kFAssertFallback(data<UseSmallOptimization::No>() != nullptr,
+            _capacity = 0,
+            throw std::runtime_error("Var::reserve: Memory exhausted")
+        );
+    }
+}
+
+template<kF::Var::ShouldDestructInstance DestructInstance>
+inline void kF::Var::releaseAlloc(void) noexcept
+{
+    if constexpr (DestructInstance == ShouldDestructInstance::Yes) {
+        if (_capacity)
+            std::free(data<UseSmallOptimization::No>());
+        _capacity = 0;
     }
 }

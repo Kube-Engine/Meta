@@ -38,20 +38,21 @@ kF::Meta::Type::Descriptor kF::Meta::Type::Descriptor::Construct(void) noexcept
 
     return Descriptor {
         typeID: typeid(Type),
-        name: 0,
         typeSize: ConstexprTernary((!std::is_same_v<Type, void>),
             sizeof(Type),
             0u
         ),
-        isSmallOptimized: ConstexprTernary((!std::is_same_v<Type, void>),
-            Internal::IsVarSmallOptimized<Type>,
-            false
-        ),
-        isVoid: std::is_same_v<Type, void>,
-        isIntegral: std::is_integral_v<Type>,
-        isFloating: std::is_floating_point_v<Type>,
-        isDouble: std::is_same_v<Type, double>,
-        isPointer: std::is_array_v<Type> || std::is_pointer_v<Type>,
+        name: 0,
+        flags: [] {
+            return static_cast<Flags>(
+                    (Internal::IsVarSmallOptimized<Type> ? Flags::IsSmallOptimized : Flags::NoFlags)
+                |   (std::is_same_v<Type, void> ? Flags::IsVoid : Flags::NoFlags)
+                |   (std::is_integral_v<Type> ? Flags::IsIntegral : Flags::NoFlags)
+                |   (std::is_floating_point_v<Type> ? Flags::IsFloating : Flags::NoFlags)
+                |   (std::is_same_v<Type, double> ? Flags::IsDouble : Flags::NoFlags)
+                |   (std::is_array_v<Type> || std::is_pointer_v<Type> ? Flags::IsPointer : Flags::NoFlags)
+            );
+        }(),
         defaultConstructFunc: ConstexprTernary((!std::is_same_v<Type, void> && std::is_default_constructible_v<Type>),
             &Internal::MakeDefaultConstructor<Type>,
             nullptr
@@ -120,11 +121,11 @@ inline kF::Var kF::Meta::Type::defaultConstruct(void) const
     kF::Var var;
 
     if (isSmallOptimized()) {
-        var.reserve<true, false>(*this);
-        defaultConstruct(var.data<true>());
+        var.reserve<Var::UseSmallOptimization::Yes, Var::ShouldDestructInstance::No>(*this);
+        defaultConstruct(var.data<Var::UseSmallOptimization::Yes>());
     } else {
-        var.reserve<false, false>(*this);
-        defaultConstruct(var.data<false>());
+        var.reserve<Var::UseSmallOptimization::No, Var::ShouldDestructInstance::No>(*this);
+        defaultConstruct(var.data<Var::UseSmallOptimization::No>());
     }
     return var;
 }
@@ -134,11 +135,11 @@ inline kF::Var kF::Meta::Type::copyConstruct(const void *data) const
     kF::Var var;
 
     if (isSmallOptimized()) {
-        var.reserve<true, false>(*this);
-        copyConstruct(var.data<true>(), data);
+        var.reserve<Var::UseSmallOptimization::Yes, Var::ShouldDestructInstance::No>(*this);
+        copyConstruct(var.data<Var::UseSmallOptimization::Yes>(), data);
     } else {
-        var.reserve<false, false>(*this);
-        copyConstruct(var.data<false>(), data);
+        var.reserve<Var::UseSmallOptimization::No, Var::ShouldDestructInstance::No>(*this);
+        copyConstruct(var.data<Var::UseSmallOptimization::No>(), data);
     }
     return var;
 }
@@ -148,11 +149,11 @@ inline kF::Var kF::Meta::Type::moveConstruct(void *data) const
     Var var;
 
     if (isSmallOptimized()) {
-        var.reserve<true, false>(*this);
-        moveConstruct(var.data<true>(), data);
+        var.reserve<Var::UseSmallOptimization::Yes, Var::ShouldDestructInstance::No>(*this);
+        moveConstruct(var.data<Var::UseSmallOptimization::Yes>(), data);
     } else {
-        var.reserve<false, false>(*this);
-        moveConstruct(var.data<false>(), data);
+        var.reserve<Var::UseSmallOptimization::No, Var::ShouldDestructInstance::No>(*this);
+        moveConstruct(var.data<Var::UseSmallOptimization::No>(), data);
     }
     return var;
 }

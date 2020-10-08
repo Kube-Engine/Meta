@@ -11,6 +11,59 @@
 
 using namespace kF;
 
+TEST(Type, TypeFlags)
+{
+    Meta::Type ty = Meta::Factory<int>::Resolve();
+    ASSERT_TRUE(ty.isSmallOptimized());
+    ASSERT_FALSE(ty.isVoid());
+    ASSERT_TRUE(ty.isIntegral());
+    ASSERT_FALSE(ty.isFloating());
+    ASSERT_FALSE(ty.isDouble());
+    ASSERT_FALSE(ty.isPointer());
+    ty = Meta::Factory<float>::Resolve();
+    ASSERT_TRUE(ty.isSmallOptimized());
+    ASSERT_FALSE(ty.isVoid());
+    ASSERT_FALSE(ty.isIntegral());
+    ASSERT_TRUE(ty.isFloating());
+    ASSERT_FALSE(ty.isDouble());
+    ASSERT_FALSE(ty.isPointer());
+    ty = Meta::Factory<double>::Resolve();
+    ASSERT_TRUE(ty.isSmallOptimized());
+    ASSERT_FALSE(ty.isVoid());
+    ASSERT_FALSE(ty.isIntegral());
+    ASSERT_TRUE(ty.isFloating());
+    ASSERT_TRUE(ty.isDouble());
+    ASSERT_FALSE(ty.isPointer());
+    ty = Meta::Factory<void>::Resolve();
+    ASSERT_FALSE(ty.isSmallOptimized());
+    ASSERT_TRUE(ty.isVoid());
+    ASSERT_FALSE(ty.isIntegral());
+    ASSERT_FALSE(ty.isFloating());
+    ASSERT_FALSE(ty.isDouble());
+    ASSERT_FALSE(ty.isPointer());
+    ty = Meta::Factory<char *>::Resolve();
+    ASSERT_TRUE(ty.isSmallOptimized());
+    ASSERT_FALSE(ty.isVoid());
+    ASSERT_FALSE(ty.isIntegral());
+    ASSERT_FALSE(ty.isFloating());
+    ASSERT_FALSE(ty.isDouble());
+    ASSERT_TRUE(ty.isPointer());
+    ty = Meta::Factory<char[420]>::Resolve();
+    ASSERT_TRUE(ty.isSmallOptimized()); // We only store the pointer not the array !
+    ASSERT_FALSE(ty.isVoid());
+    ASSERT_FALSE(ty.isIntegral());
+    ASSERT_FALSE(ty.isFloating());
+    ASSERT_FALSE(ty.isDouble());
+    ASSERT_TRUE(ty.isPointer());
+    ty = Meta::Factory<std::array<std::size_t, 20>>::Resolve();
+    ASSERT_FALSE(ty.isSmallOptimized());
+    ASSERT_FALSE(ty.isVoid());
+    ASSERT_FALSE(ty.isIntegral());
+    ASSERT_FALSE(ty.isFloating());
+    ASSERT_FALSE(ty.isDouble());
+    ASSERT_FALSE(ty.isPointer()); // An std::array is not a pointer
+}
+
 TEST(Type, BasicsSemantics)
 {
     Meta::Type t1;
