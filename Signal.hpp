@@ -8,6 +8,8 @@
 #include <functional>
 #include <memory>
 
+#include <Kube/Core/FlatString.hpp>
+
 #include "Var.hpp"
 
 namespace kF::Meta
@@ -26,17 +28,18 @@ namespace kF::Meta
 class kF::Meta::Signal
 {
 public:
-    struct Descriptor
+    struct alignas(32) Descriptor
     {
         const Internal::OpaqueFunction signalPtr { nullptr };
         const HashedName name { 0 };
-        const std::size_t argsCount { 0 };
-        std::vector<Slot> slots {};
-        std::vector<std::size_t> freeSlots {};
+        const std::uint32_t argsCount { 0 };
+        Core::FlatVector<Slot> slots {};
+        Core::FlatVector<std::size_t> freeSlots {};
 
         template<auto SignalPtr>
         static Descriptor Construct(const HashedName name) noexcept;
     };
+    static_assert(sizeof(Descriptor) == 32, "Signal descriptor must take 32 bytes");
 
     /** @brief Construct passing a descriptor instance */
     Signal(Descriptor *desc = nullptr) noexcept : _desc(desc) {}

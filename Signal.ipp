@@ -51,12 +51,12 @@ inline kF::Meta::Connection kF::Meta::Signal::connect(const Sender &sender, cons
         throw std::runtime_error("Meta::Signal::connect: Invalid number of arguments of slot"));
     if (!_desc->freeSlots.empty()) {
         auto &slot = _desc->slots[_desc->freeSlots.back()];
-        _desc->freeSlots.pop_back();
+        _desc->freeSlots.pop();
         opaqueFunctor = slot.opaqueFunctor.get();
         slot.sender = senderPtr;
         *slot.opaqueFunctor = OpaqueFunctor::Construct<Receiver, Functor, Decomposer>(receiverPtr, std::forward<Functor>(functor));
     } else {
-        opaqueFunctor = _desc->slots.emplace_back(Slot {
+        opaqueFunctor = _desc->slots.push(Slot {
             sender: senderPtr,
             opaqueFunctor: std::make_unique<OpaqueFunctor>(OpaqueFunctor::Construct<Receiver, Functor, Decomposer>(receiverPtr, std::forward<Functor>(functor)))
         }).opaqueFunctor.get();
@@ -95,7 +95,7 @@ inline void kF::Meta::Signal::disconnect(const OpaqueFunctor *opaqueFunctor) noe
         }
         slot.sender = nullptr;
         slot.opaqueFunctor->invokeFunc = nullptr;
-        _desc->freeSlots.emplace_back(i);
+        _desc->freeSlots.push(i);
         break;
     }
 }
