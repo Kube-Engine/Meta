@@ -9,6 +9,7 @@ set(KubeMetaTestsSources
     ${KubeMetaTestsDir}/tests_Type.cpp
     ${KubeMetaTestsDir}/tests_Var.cpp
     ${KubeMetaTestsDir}/tests_Signal.cpp
+    ${KubeMetaTestsDir}/tests_SlotTable.cpp
 )
 
 add_executable(${CMAKE_PROJECT_NAME} ${KubeMetaTestsSources})

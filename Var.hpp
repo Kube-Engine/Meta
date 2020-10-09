@@ -224,3 +224,5 @@ private:
     template<ShouldDestructInstance DestructInstance>
     void releaseAlloc(void) noexcept;
 };
+
+static_assert(sizeof(kF::Var) - kF::Meta::Internal::VarSmallOptimizationSize == 16ul, "Var data must take only 16 bytes");

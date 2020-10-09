@@ -154,7 +154,7 @@ void kF::Meta::Internal::MakeAssignmentOperator(void *data, const Var &var)
         return (*OperatorFunc)(*reinterpret_cast<Type *>(data), var.directConvert<Type>());
 }
 
-template<typename Type, typename ArgType>
+template<typename ArgType>
 inline auto kF::Meta::Internal::ForwardArgument(Var *any)
 {
     using FlatArgType = std::remove_cvref_t<ArgType>;
@@ -197,14 +197,14 @@ inline kF::Var kF::Meta::Internal::Invoke(const void *instance, Var *args, const
     if constexpr (Decomposer::IsFunctor || !Decomposer::IsMember)
         return Dispatch(
             std::forward_as_tuple(
-                ForwardArgument<Type, std::tuple_element_t<Indexes, typename Decomposer::ArgsTuple>>(args + Indexes)...
+                ForwardArgument<std::tuple_element_t<Indexes, typename Decomposer::ArgsTuple>>(args + Indexes)...
             )
         );
     else
         return Dispatch(
             std::forward_as_tuple(
                 const_cast<Type *>(reinterpret_cast<const Type *>(instance)),
-                ForwardArgument<Type, std::tuple_element_t<Indexes, typename Decomposer::ArgsTuple>>(args + Indexes)...
+                ForwardArgument<std::tuple_element_t<Indexes, typename Decomposer::ArgsTuple>>(args + Indexes)...
             )
         );
 }
@@ -224,7 +224,7 @@ inline kF::Var kF::Meta::Internal::Invoke(Functor &functor, [[maybe_unused]] con
         return Dispatch(
             std::forward<Functor>(functor),
             std::forward_as_tuple(
-                ForwardArgument<Type, std::tuple_element_t<Indexes, typename Decomposer::ArgsTuple>>(args + Indexes)...
+                ForwardArgument<std::tuple_element_t<Indexes, typename Decomposer::ArgsTuple>>(args + Indexes)...
             )
         );
     else
@@ -232,7 +232,7 @@ inline kF::Var kF::Meta::Internal::Invoke(Functor &functor, [[maybe_unused]] con
             std::forward<Functor>(functor),
             std::forward_as_tuple(
                 const_cast<Type *>(reinterpret_cast<const Type *>(instance)),
-                ForwardArgument<Type, std::tuple_element_t<Indexes, typename Decomposer::ArgsTuple>>(args + Indexes)...
+                ForwardArgument<std::tuple_element_t<Indexes, typename Decomposer::ArgsTuple>>(args + Indexes)...
             )
         );
 }

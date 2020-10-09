@@ -16,6 +16,7 @@ namespace kF
         class Converter;
         class Function;
         class Data;
+        class SlotTable;
         class Signal;
         template<typename Type>
         class Factory;

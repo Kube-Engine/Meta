@@ -242,7 +242,7 @@ namespace kF
             void AssignmentSubstractionPointer(Type &lhs, const std::size_t rhs) noexcept { lhs -= rhs; }
 
             /** @brief Helper used to forward an argument of an invoked function */
-            template<typename Type, typename ArgType>
+            template<typename ArgType>
             auto ForwardArgument(Var *any);
 
             /** @brief Meta function invoker
