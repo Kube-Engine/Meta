@@ -17,7 +17,7 @@ inline kF::Meta::Function::Descriptor kF::Meta::Function::Descriptor::Construct(
         returnType: Factory<typename Decomposer::ReturnType>::Resolve(),
         argTypeFunc: &Decomposer::ArgType,
         invokeFunc: [](const void *instance, Var *args) {
-            return Internal::Invoke<Type, FunctionPtr, Decomposer>(instance, args, Decomposer::IndexSequence);
+            return Internal::Invoke<Type, FunctionPtr, true, Decomposer>(instance, args, Decomposer::IndexSequence);
         }
     };
 }

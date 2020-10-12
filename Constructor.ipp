@@ -19,7 +19,7 @@ inline kF::Meta::Constructor::Descriptor kF::Meta::Constructor::Descriptor::Cons
         argTypeFunc: &Decomposer::ArgType,
         type: Factory<Type>::Resolve(),
         invokeFunc: [](void *instance, Var *args) -> bool {
-            return Internal::Invoke<Type, Dispatch, Decomposer>(instance, args, Decomposer::IndexSequence).operator bool();
+            return Internal::Invoke<Type, Dispatch, true, Decomposer>(instance, args, Decomposer::IndexSequence).operator bool();
         }
     };
 }

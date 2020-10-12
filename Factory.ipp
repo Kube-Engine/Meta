@@ -4,7 +4,7 @@
  */
 
 template<typename Type>
-void kF::Meta::FactoryBase<Type>::Register(const HashedName name) noexcept_ndebug
+inline void kF::Meta::FactoryBase<Type>::Register(const HashedName name) noexcept_ndebug
 {
     kFAssert(GetDescriptor().name == 0,
         throw std::logic_error("Factory::Register: Type already registered"));
@@ -14,7 +14,7 @@ void kF::Meta::FactoryBase<Type>::Register(const HashedName name) noexcept_ndebu
 
 template<typename Type>
 template<typename Base>
-void kF::Meta::FactoryBase<Type>::RegisterBase(void) noexcept_ndebug
+inline void kF::Meta::FactoryBase<Type>::RegisterBase(void) noexcept_ndebug
 {
     kFAssert(!Meta::Type(&GetDescriptor()).findBase(FactoryBase<Base>::Resolve()),
         throw std::logic_error("Factory::RegisterBase: Base already registered"));
@@ -23,7 +23,7 @@ void kF::Meta::FactoryBase<Type>::RegisterBase(void) noexcept_ndebug
 
 template<typename Type>
 template<typename ...Args>
-void kF::Meta::FactoryBase<Type>::RegisterConstructor(void) noexcept_ndebug
+inline void kF::Meta::FactoryBase<Type>::RegisterConstructor(void) noexcept_ndebug
 {
     static auto descriptor { Constructor::Descriptor::Construct<Type, Args...>() };
 
@@ -34,27 +34,9 @@ void kF::Meta::FactoryBase<Type>::RegisterConstructor(void) noexcept_ndebug
 
 template<typename Type>
 template<typename To, auto FunctionPtr>
-void kF::Meta::FactoryBase<Type>::RegisterConverter(void) noexcept_ndebug
+inline void kF::Meta::FactoryBase<Type>::RegisterConverter(void) noexcept_ndebug
 {
-    static_assert(!std::is_same_v<Type, To>, "A meta converter must not convert a type to itself");
-
-    constexpr bool IsCustom = [] {
-        if constexpr (std::is_same_v<decltype(FunctionPtr), std::nullptr_t>)
-            return false;
-        else if constexpr (std::is_convertible_v<decltype(FunctionPtr), std::nullptr_t>)
-            return FunctionPtr != nullptr;
-        else
-            return true;
-    }();
-
-    static auto descriptor {
-        Converter::Descriptor::Construct<To,
-            ConstexprTernary(!IsCustom,
-                (&Internal::MakeConverter<Type, To>),
-                (&Internal::MakeCustomConverter<Type, To, FunctionPtr>)
-            )
-        >()
-    };
+    static auto descriptor { Converter::Descriptor::Construct<Type, To, FunctionPtr>() };
 
     kFAssert(!Meta::Type(&GetDescriptor()).findConverter(FactoryBase<To>::Resolve()),
         throw std::logic_error("Factory::RegisterConverter: Converter already registered"));
@@ -63,7 +45,7 @@ void kF::Meta::FactoryBase<Type>::RegisterConverter(void) noexcept_ndebug
 
 template<typename Type>
 template<auto FunctionPtr>
-void kF::Meta::FactoryBase<Type>::RegisterFunction(const HashedName name) noexcept_ndebug
+inline void kF::Meta::FactoryBase<Type>::RegisterFunction(const HashedName name) noexcept_ndebug
 {
     static auto descriptor { Function::Descriptor::Construct<Type, FunctionPtr>(name) };
 
@@ -74,7 +56,7 @@ void kF::Meta::FactoryBase<Type>::RegisterFunction(const HashedName name) noexce
 
 template<typename Type>
 template<auto GetFunctionPtr, auto SetFunctionPtr>
-void kF::Meta::FactoryBase<Type>::RegisterData(const HashedName name) noexcept_ndebug
+inline void kF::Meta::FactoryBase<Type>::RegisterData(const HashedName name) noexcept_ndebug
 {
     static auto descriptor { Data::Descriptor::Construct<Type, GetFunctionPtr, SetFunctionPtr>(name) };
 
@@ -85,7 +67,7 @@ void kF::Meta::FactoryBase<Type>::RegisterData(const HashedName name) noexcept_n
 
 template<typename Type>
 template<auto SignalPtr>
-void kF::Meta::FactoryBase<Type>::RegisterSignal(const HashedName name) noexcept_ndebug
+inline void kF::Meta::FactoryBase<Type>::RegisterSignal(const HashedName name) noexcept_ndebug
 {
     static auto descriptor { Signal::Descriptor::Construct<SignalPtr>(name) };
 

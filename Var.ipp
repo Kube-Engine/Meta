@@ -198,25 +198,36 @@ inline const Type *kF::Var::tryCast(void) const noexcept
     return nullptr;
 }
 
-inline kF::Var kF::Var::convert(const Meta::Type type) const
+inline kF::Var kF::Var::convertOpaque(const Meta::Type type) const
 {
     if (auto conv = _type.findConverter(type); conv)
         return conv.invoke(*this);
-    return Var();
+    else
+        return Var();
 }
 
-template<typename Type>
-inline Type kF::Var::directConvert(void) const
+inline bool kF::Var::convert(const Meta::Type type)
 {
-    auto ty = Meta::Factory<Type>::Resolve();
+    auto conv = _type.findConverter(type);
 
-    if (type() == ty)
-        return as<Type>();
+    if (!conv) [[unlikely]]
+        return false;
+    Var toMove = conv.invoke(*this);
+    move(toMove);
+    return true;
+}
+
+template<typename To>
+inline To kF::Var::convertExplicit(void) const
+{
+    const auto ty = Meta::Factory<To>::Resolve();
     auto conv = type().findConverter(ty);
+
     kFAssert(conv,
-        throw std::runtime_error("Var::directConvert: Type not convertible"));
-    Var res = conv.invoke(*this); // Weird bug : if 'Var' type is not explicit (auto), it won't deduce 'as' member function
-    return std::move(res.as<Type>());
+        throw std::runtime_error("Var::convertExplicit: Type not convertible"));
+    To to;
+    conv.invoke(data(), &to);
+    return to;
 }
 
 inline bool kF::Var::toBool(void) const

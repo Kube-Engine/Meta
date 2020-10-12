@@ -26,7 +26,6 @@ set(KubeMetaSources
     ${KubeMetaDir}/Var.ipp
     ${KubeMetaDir}/Type.hpp
     ${KubeMetaDir}/Type.ipp
-    ${KubeMetaDir}/Type.cpp
     ${KubeMetaDir}/Register.cpp
 )
 

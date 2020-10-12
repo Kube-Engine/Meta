@@ -28,7 +28,7 @@ inline kF::Meta::Data::Descriptor kF::Meta::Data::Descriptor::Construct(const Ha
         .setFunc = ConstexprTernary(
             SetFunctionPtr,
             ([]([[maybe_unused]] const void *instance, Var &value) -> Var {
-                return Internal::Invoke<Type, SetFunctionPtr, SetDecomposer>(instance, &value, SetDecomposer::IndexSequence);
+                return Internal::Invoke<Type, SetFunctionPtr, true, SetDecomposer>(instance, &value, SetDecomposer::IndexSequence);
             }),
             nullptr
         )

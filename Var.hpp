@@ -157,16 +157,23 @@ public:
     [[nodiscard]] bool isCastAble(void) const noexcept
         { return _type.typeID() == typeid(Type) || type().findBase(Meta::Factory<Type>::Resolve()); }
 
-    /** @brief Tries to convert internal instance to given meta type name */
-    [[nodiscard]] Var convert(const Meta::Type type) const;
+    /** @brief Tries to convert current instance into given type */
+    template<typename To>
+    [[nodiscard]] bool convert(void) { return convert(Meta::Factory<To>::Resolve()); }
 
-    /** @brief Tries to convert internal instance to given type */
-    template<typename Type>
-    [[nodiscard]] Var convert(void) const { return convert(Meta::Factory<Type>::Resolve()); }
+    /** @brief Tries to convert current instance into given meta type */
+    [[nodiscard]] bool convert(const Meta::Type type);
+
+    /** @brief Tries to create a converted value to given type */
+    template<typename To>
+    [[nodiscard]] Var convertOpaque(void) const { return convertOpaque(Meta::Factory<To>::Resolve()); }
+
+    /** @brief Tries to get a converted value of given meta type name */
+    [[nodiscard]] Var convertOpaque(const Meta::Type type) const;
 
     /** @brief Tries to convert internal directly to given type (If impossible, will throw in debug or crash in release) */
-    template<typename Type>
-    [[nodiscard]] Type directConvert(void) const;
+    template<typename To>
+    [[nodiscard]] To convertExplicit(void) const;
 
     /** @brief Tries to convert internal to boolean */
     [[nodiscard]] bool toBool(void) const;

@@ -13,7 +13,7 @@
 class kF::Meta::Converter
 {
 public:
-    using ConvertSignature = Var(*)(const void *);
+    using ConvertSignature = void(*)(const void *from, void *to);
 
     /** @brief Describe a meta converter */
     struct alignas(16) Descriptor
@@ -22,7 +22,7 @@ public:
         const ConvertSignature convertFunc;
 
         /** @brief Construct a Descriptor */
-        template<typename Type, ConvertSignature FunctionPtr>
+        template<typename From, typename To, auto FunctionPtr>
         static Descriptor Construct(void) noexcept;
     };
 
@@ -47,9 +47,13 @@ public:
     /** @brief Get target converter type */
     [[nodiscard]] Type convertType(void) const noexcept { return _desc->convertType; }
 
-    /** @brief Invoke the converter */
-    [[nodiscard]] Var invoke(const Var &from) const { return (*_desc->convertFunc)(from.data()); }
-    [[nodiscard]] Var invoke(const void *from) const { return (*_desc->convertFunc)(from); }
+    /** @brief Invoke the converter and return a Var */
+    [[nodiscard]] Var invoke(const Var &from) const { Var to; invoke<Var::ShouldDestructInstance::No>(from, to); return to; }
+
+    /** @brief Invoke the converter directly to a Var */
+    template<Var::ShouldDestructInstance DestructInstance = Var::ShouldDestructInstance::Yes>
+    void invoke(const Var &from, Var &to) const;
+    void invoke(const void *from, void *to) const { (*_desc->convertFunc)(from, to); }
 
 private:
     const Descriptor *_desc = nullptr;

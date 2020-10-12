@@ -179,12 +179,6 @@ namespace kF
             template<typename Type>
             void MakeDestructor(void *data) noexcept_destructible(Type);
 
-            /** @brief Helpers used to generate opaque conversion functions */
-            template<typename From, typename To>
-            Var MakeConverter(const void *from) noexcept_expr(static_cast<To>(std::declval<From>()));
-            template<typename From, typename To, auto FunctionPtr>
-            Var MakeCustomConverter(const void *from) noexcept_expr(FunctionPtr(std::declval<const From &>()));
-
             /** @brief Helpers used to generate opaque primitive functions */
             template<typename Type, std::enable_if_t<std::is_convertible_v<Type, bool>>* = nullptr>
             [[nodiscard]] bool MakeToBool(const void *data) noexcept_convertible(Type, bool) { return static_cast<bool>(*reinterpret_cast<const Type *>(data)); }
@@ -242,8 +236,8 @@ namespace kF
             void AssignmentSubstractionPointer(Type &lhs, const std::size_t rhs) noexcept { lhs -= rhs; }
 
             /** @brief Helper used to forward an argument of an invoked function */
-            template<typename ArgType>
-            auto ForwardArgument(Var *any);
+            template<typename ArgType, bool AllowImplicitMove>
+            decltype(auto) ForwardArgument(Var *any);
 
             /** @brief Meta function invoker
              * Will perform different semantics uppon function's arguments
@@ -252,11 +246,11 @@ namespace kF
              * LValue constant - Forward if possible, else try to convert
              * Value - Forward if possible, else try to convert
              */
-            template<typename Type, auto FunctionPtr, typename Decomposer, std::size_t ...Indexes>
+            template<typename Type, auto FunctionPtr, bool AllowImplicitMove, typename Decomposer, std::size_t ...Indexes>
             Var Invoke([[maybe_unused]] const void *instance, Var *args, const std::index_sequence<Indexes...> &sequence);
 
             /** @brief Meta functor invoker */
-            template<typename Type, typename Decomposer, typename Functor, std::size_t ...Indexes>
+            template<typename Type, bool AllowImplicitMove, typename Decomposer, typename Functor, std::size_t ...Indexes>
             Var Invoke(Functor &functor, [[maybe_unused]] const void *instance, Var *args, const std::index_sequence<Indexes...> &sequence);
 
             /** @brief Simple structure that holds a type */
