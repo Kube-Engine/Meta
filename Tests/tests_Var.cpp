@@ -142,9 +142,9 @@ TEST(Var, ConversionBasics)
 
     var.emplace<int>(42);
     ASSERT_EQ(var.as<int>(), 42);
-    tmp = var.convert<float>();
+    tmp = var.convertOpaque<float>();
     ASSERT_EQ(tmp.as<float>(), 42.0f);
-    tmp = var.convert<std::string>();
+    tmp = var.convertOpaque<std::string>();
     ASSERT_EQ(tmp.as<std::string>(), "42");
 }
 

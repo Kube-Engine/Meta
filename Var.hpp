@@ -164,11 +164,11 @@ public:
     /** @brief Tries to convert current instance into given meta type */
     [[nodiscard]] bool convert(const Meta::Type type);
 
-    /** @brief Tries to create a converted value to given type */
+    /** @brief Tries to create an opaque converted value to given type */
     template<typename To>
     [[nodiscard]] Var convertOpaque(void) const { return convertOpaque(Meta::Factory<To>::Resolve()); }
 
-    /** @brief Tries to get a converted value of given meta type name */
+    /** @brief Tries to get an opaque converted value of given meta type name */
     [[nodiscard]] Var convertOpaque(const Meta::Type type) const;
 
     /** @brief Tries to convert internal directly to given type (If impossible, will throw in debug or crash in release) */

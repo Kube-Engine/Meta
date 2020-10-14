@@ -8,6 +8,17 @@
 #include <Kube/Meta/Meta.hpp>
 
 using namespace kF;
+using namespace kF::Literal;
+
+TEST(Converter, Basics)
+{
+    Meta::Resolver::Clear();
+    Meta::Factory<int>::Register("int"_hash);
+    Meta::Factory<int>::RegisterConverter<float>();
+    Var x { 1 };
+    auto conv = Meta::Factory<int>::Resolve().findConverter(Meta::Factory<float>::Resolve());
+    ASSERT_TRUE(conv);
+}
 
 #define CONVERTER_TEST(TestName, From, fromValue, To, toValue, converterFunc) \
 TEST(Converter, TestName) \

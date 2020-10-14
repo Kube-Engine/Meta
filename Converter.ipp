@@ -25,12 +25,12 @@ inline kF::Meta::Converter::Descriptor kF::Meta::Converter::Descriptor::Construc
     }
 
     return Descriptor {
-        .convertType = Factory<Type>::Resolve(),
+        .convertType = Factory<To>::Resolve(),
         .convertFunc = [](const void *from, void *to) {
             if constexpr (IsCustom)
-                *reinterpret_cast<To *>(to) = std::invoke(FunctionPtr, *reinterpret_cast<const From *>(from));
+                new (to) To { std::invoke(FunctionPtr, *reinterpret_cast<const From *>(from)) };
             else
-                *reinterpret_cast<To *>(to) = static_cast<To>(*reinterpret_cast<const From *>(from));
+                new (to) To { static_cast<To>(*reinterpret_cast<const From *>(from)) };
         }
     };
 }
@@ -38,11 +38,11 @@ inline kF::Meta::Converter::Descriptor kF::Meta::Converter::Descriptor::Construc
 template<kF::Var::ShouldDestructInstance DestructInstance>
 void kF::Meta::Converter::invoke(const Var &from, Var &to) const
 {
-    if (to.type().isSmallOptimized()) {
-        to.reserve<Var::UseSmallOptimization::Yes, DestructInstance>(convertType());
+    if (auto type = convertType(); type.isSmallOptimized()) {
+        to.reserve<Var::UseSmallOptimization::Yes, DestructInstance>(type);
         invoke(from.data(), to.data<Var::UseSmallOptimization::Yes>());
     } else {
-        to.reserve<Var::UseSmallOptimization::Yes, DestructInstance>(convertType());
-        invoke(from.data(), to.data<Var::UseSmallOptimization::Yes>());
+        to.reserve<Var::UseSmallOptimization::No, DestructInstance>(type);
+        invoke(from.data(), to.data<Var::UseSmallOptimization::No>());
     }
 }
