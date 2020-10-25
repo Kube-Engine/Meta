@@ -41,7 +41,7 @@ public:
 
     /** @brief Register a data of templated type */
     template<auto GetFunctionPtr, auto SetFunctionPtr = nullptr>
-    static void RegisterData(const HashedName name) noexcept_ndebug;
+    static void RegisterData(const HashedName name, const Signal signal = Signal()) noexcept_ndebug;
 
     /**
      * @brief Register a signal of templated type
@@ -83,7 +83,7 @@ public:
 
     /** @brief Alias of RegisterData function */
     template<auto GetFunctionPtr, auto SetFunctionPtr = nullptr>
-    FactoryBase &data(const HashedName name) noexcept_ndebug { RegisterData<GetFunctionPtr, SetFunctionPtr>(name); return *this; }
+    FactoryBase &data(const HashedName name, const Signal signal = Signal()) noexcept_ndebug { RegisterData<GetFunctionPtr, SetFunctionPtr>(name); return *this; }
 
     /** @brief Alias of RegisterSignal function */
     template<auto SignalPtr>

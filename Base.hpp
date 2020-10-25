@@ -68,7 +68,7 @@ namespace kF
             struct FunctionDecomposer<Return(Args...)>
             {
                 using ClassType = void;
-                using ReturnType = std::remove_cvref_t<Return>;
+                using ReturnType = Return;
                 using ArgsTuple = std::tuple<Args...>;
 
                 static constexpr std::index_sequence_for<Args...> IndexSequence {};

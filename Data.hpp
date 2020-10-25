@@ -6,6 +6,7 @@
 #pragma once
 
 #include "Type.hpp"
+#include "Signal.hpp"
 
 /**
  * @brief Data is used to store meta-data about a getter and a setter used like a property
@@ -17,21 +18,23 @@ public:
     using SetFunc = Var(*)(const void *, Var &);
 
     /** @brief Describe a meta data */
-    struct alignas(32) Descriptor
+    struct KF_ALIGN_CACHELINE Descriptor
     {
         const HashedName name;
         const bool isStatic;
-        const char _padding[3];
+        const bool isMoveOnly;
+        const char _padding[2];
         const Type type;
         const GetFunc getFunc;
         const SetFunc setFunc;
+        const Signal signal;
 
         /** @brief Construct a Descriptor */
         template<typename Type, auto GetFunctionPtr, auto SetFunctionPtr>
-        static Descriptor Construct(const HashedName name) noexcept;
+        static Descriptor Construct(const HashedName name, const Signal signal = Signal()) noexcept;
     };
 
-    static_assert(sizeof(Descriptor) == 32, "Data descriptor must take 32 bytes");
+    static_assert(sizeof(Descriptor) == Core::Utils::CacheLineSize, "Data descriptor must take size of a cacheline");
 
     /** @brief Construct passing a descriptor instance */
     Data(const Descriptor *desc = nullptr) noexcept : _desc(desc) {}

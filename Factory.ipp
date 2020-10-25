@@ -56,9 +56,9 @@ inline void kF::Meta::FactoryBase<Type>::RegisterFunction(const HashedName name)
 
 template<typename Type>
 template<auto GetFunctionPtr, auto SetFunctionPtr>
-inline void kF::Meta::FactoryBase<Type>::RegisterData(const HashedName name) noexcept_ndebug
+inline void kF::Meta::FactoryBase<Type>::RegisterData(const HashedName name, const Signal signal) noexcept_ndebug
 {
-    static auto descriptor { Data::Descriptor::Construct<Type, GetFunctionPtr, SetFunctionPtr>(name) };
+    static auto descriptor { Data::Descriptor::Construct<Type, GetFunctionPtr, SetFunctionPtr>(name, signal) };
 
     kFAssert(!Meta::Type(&GetDescriptor()).findData(name),
         throw std::logic_error("Factory::RegisterData: Data already registered"));
