@@ -13,7 +13,7 @@ public:
     using InvokeFunc = bool(*)(void *, Var *);
     using ArgTypeFunc = Type(*)(const std::size_t) noexcept;
 
-    struct alignas(32) Descriptor
+    struct KF_ALIGN_HALF_CACHELINE Descriptor
     {
         const std::size_t argsCount;
         const ArgTypeFunc argTypeFunc;

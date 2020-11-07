@@ -18,7 +18,7 @@
 class kF::Meta::Signal
 {
 public:
-    struct alignas(16) Descriptor
+    struct KF_ALIGN_QUARTER_CACHELINE Descriptor
     {
         const Internal::OpaqueFunction signalPtr { nullptr };
         const HashedName name { 0 };
@@ -27,7 +27,7 @@ public:
         template<auto SignalPtr>
         static Descriptor Construct(const HashedName name) noexcept;
     };
-    static_assert(sizeof(Descriptor) == 16, "Signal descriptor must take 16 bytes");
+    static_assert(sizeof(Descriptor) == Core::CacheLineQuarterSize, "Signal descriptor must take the quarter of a cacheline");
 
     /** @brief Construct passing a descriptor instance */
     Signal(Descriptor *desc = nullptr) noexcept : _desc(desc) {}

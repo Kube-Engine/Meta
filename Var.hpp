@@ -15,7 +15,8 @@
  * It can hold a value, a reference or a rvalue reference.
  * Value that are <= to size of a pointer are cheaply copied.
  */
-class alignas(kF::Meta::Internal::VarSmallOptimizationSize > 16ul ? 64ul : 32ul) kF::Var
+class alignas(kF::Meta::Internal::VarSmallOptimizationSize > kF::Core::CacheLineQuarterSize ? kF::Core::CacheLineSize : kF::Core::CacheLineHalfSize)
+    kF::Var
 {
 public:
     /**
@@ -232,4 +233,4 @@ private:
     void releaseAlloc(void) noexcept;
 };
 
-static_assert(sizeof(kF::Var) - kF::Meta::Internal::VarSmallOptimizationSize == 16ul, "Var data must take only 16 bytes");
+static_assert(sizeof(kF::Var) - kF::Meta::Internal::VarSmallOptimizationSize == kF::Core::CacheLineQuarterSize, "Var data must take the qurater of a cacheline");

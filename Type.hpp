@@ -38,7 +38,7 @@ public:
         IsPointer           = 0b100000
     };
 
-    struct KF_ALIGN_CACHELINE2 Descriptor
+    struct KF_ALIGN_DOUBLE_CACHELINE Descriptor
     {
         // --- Cacheline 1 ---
         /* Type description - 24 bytes */
@@ -77,7 +77,7 @@ public:
         static Descriptor Construct(void) noexcept;
     };
 
-    static_assert(sizeof(Descriptor) == Core::Utils::CacheLineSize * 4, "Type descriptor must take 4 cachelines");
+    static_assert(sizeof(Descriptor) == Core::CacheLineSize * 4, "Type descriptor must take 4 cachelines");
 
     /** @brief Construct passing a descriptor instance */
     Type(Descriptor *desc = nullptr) noexcept : _desc(desc) {}

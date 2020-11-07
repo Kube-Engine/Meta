@@ -16,7 +16,7 @@ public:
     using ConvertSignature = void(*)(const void *from, void *to);
 
     /** @brief Describe a meta converter */
-    struct alignas(16) Descriptor
+    struct KF_ALIGN_QUARTER_CACHELINE Descriptor
     {
         const Type convertType;
         const ConvertSignature convertFunc;
@@ -26,7 +26,8 @@ public:
         static Descriptor Construct(void) noexcept;
     };
 
-    static_assert(sizeof(Descriptor) == 16, "Constructor descriptor must take 16 bytes");
+    static_assert(sizeof(Descriptor) == 16, "Constructor descriptor must take the quarter of a cacheline");
+    static_assert(alignof(Descriptor) == 16, "Constructor descriptor must be aligned to the quarter of a cacheline");
 
     /** @brief Construct passing a descriptor instance */
     Converter(const Descriptor *desc = nullptr) noexcept : _desc(desc) {}

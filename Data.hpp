@@ -34,7 +34,7 @@ public:
         static Descriptor Construct(const HashedName name, const Signal signal = Signal()) noexcept;
     };
 
-    static_assert(sizeof(Descriptor) == Core::Utils::CacheLineSize, "Data descriptor must take size of a cacheline");
+    static_assert(sizeof(Descriptor) == Core::CacheLineSize, "Data descriptor must take size of a cacheline");
 
     /** @brief Construct passing a descriptor instance */
     Data(const Descriptor *desc = nullptr) noexcept : _desc(desc) {}
