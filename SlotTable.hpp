@@ -17,7 +17,7 @@
 #endif
 
 /** @brief SlotTable stores all slots in pages of stable addresses */
-class KF_ALIGN_HALF_CACHELINE kF::Meta::SlotTable
+class alignas_half_cacheline kF::Meta::SlotTable
 {
 public:
     /** @brief Opaque slot index of the table */
@@ -27,7 +27,7 @@ public:
     using OpaqueIndex = std::uint64_t;
 
     /** @brief Slot stores a callback to be called when a signal is emited (either pointer or functor) */
-    class KF_ALIGN_CACHELINE Slot
+    class alignas_cacheline Slot
     {
     public:
         /** @brief Signature of the invoke helper */
@@ -62,7 +62,7 @@ public:
     static_assert(PageSize > 0 && PageSize <= UINT16_MAX, "PageSize must be of range [1, UINT16_MAX]");
 
     /** @brief A page contains an array of slots */
-    class KF_ALIGN_HALF_CACHELINE Page
+    class alignas_half_cacheline Page
     {
     public:
         /** @brief Array containing all slots */
@@ -118,7 +118,7 @@ public:
         Core::FlatVector<Index> _freeList;
     };
 
-    static_assert(sizeof(Page) == Core::CacheLineHalfSize, "Page must take the half of a cacheline");
+    static_assert_fit_half_cacheline(Page);
 
     /** @brief Construct the table */
     SlotTable(void) noexcept;
@@ -163,4 +163,4 @@ private:
     PageIndex _lastAvailablePage { 0 };
 };
 
-static_assert(sizeof(kF::Meta::SlotTable) == kF::Core::CacheLineHalfSize, "SlotTable must take the half of a cacheline");
+static_assert_fit_half_cacheline(kF::Meta::SlotTable);

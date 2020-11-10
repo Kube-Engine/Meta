@@ -38,7 +38,6 @@ target_precompile_headers(${PROJECT_NAME}
 target_link_libraries(${PROJECT_NAME}
 PUBLIC
     KubeCore
-    ParallelHashmap
 )
 
 if(${KF_TESTS})

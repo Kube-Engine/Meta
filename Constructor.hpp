@@ -13,7 +13,7 @@ public:
     using InvokeFunc = bool(*)(void *, Var *);
     using ArgTypeFunc = Type(*)(const std::size_t) noexcept;
 
-    struct KF_ALIGN_HALF_CACHELINE Descriptor
+    struct alignas_half_cacheline Descriptor
     {
         const std::size_t argsCount;
         const ArgTypeFunc argTypeFunc;
@@ -24,7 +24,7 @@ public:
         static Descriptor Construct(void) noexcept;
     };
 
-    static_assert(sizeof(Descriptor) == 32, "Constructor descriptor take 32 bytes");
+    static_assert_fit_half_cacheline(Descriptor);
 
     /** @brief Construct passing a descriptor instance */
     Constructor(const Descriptor *desc = nullptr) noexcept : _desc(desc) {}

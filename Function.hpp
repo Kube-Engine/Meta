@@ -16,7 +16,7 @@ public:
     using InvokeFunc = Var(*)(const void *, Var *);
     using ArgTypeFunc = Type(*)(const std::size_t) noexcept;
 
-    struct KF_ALIGN_HALF_CACHELINE Descriptor
+    struct alignas_half_cacheline Descriptor
     {
         const HashedName name;
         const std::uint16_t argsCount;
@@ -30,7 +30,7 @@ public:
         static Descriptor Construct(const HashedName name) noexcept;
     };
 
-    static_assert(sizeof(Descriptor) == Core::CacheLineHalfSize, "Function descriptor must take the half of a cacheline");
+    static_assert_fit_half_cacheline(Descriptor);
 
     /** @brief Construct passing a descriptor instance */
     Function(const Descriptor *desc = nullptr) noexcept : _desc(desc) {}
