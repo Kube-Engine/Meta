@@ -34,7 +34,8 @@ public:
     };
 
     /** @brief Small optimisation of Var instance */
-    union Cache {
+    union Cache
+    {
         void *ptr;
         std::byte memory[Meta::Internal::VarSmallOptimizationSize];
     };
