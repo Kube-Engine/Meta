@@ -247,11 +247,11 @@ namespace kF
              * Value - Forward if possible, else try to convert
              */
             template<typename Type, auto FunctionPtr, bool AllowImplicitMove, typename Decomposer, std::size_t ...Indexes>
-            Var Invoke([[maybe_unused]] const void *instance, Var *args, const std::index_sequence<Indexes...> &sequence);
+            Var Invoke([[maybe_unused]] const void *instance, Var *args, std::index_sequence<Indexes...>);
 
             /** @brief Meta functor invoker */
             template<typename Type, bool AllowImplicitMove, typename Decomposer, typename Functor, std::size_t ...Indexes>
-            Var Invoke(Functor &functor, [[maybe_unused]] const void *instance, Var *args, const std::index_sequence<Indexes...> &sequence);
+            Var Invoke(Functor &functor, [[maybe_unused]] const void *instance, Var *args, std::index_sequence<Indexes...>);
 
             /** @brief Simple structure that holds a type */
             template<typename Target>

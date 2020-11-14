@@ -188,7 +188,7 @@ inline decltype(auto) kF::Meta::Internal::ForwardArgument(Var *any)
 }
 
 template<typename Type, auto FunctionPtr, bool AllowImplicitMove, typename Decomposer, std::size_t ...Indexes>
-inline kF::Var kF::Meta::Internal::Invoke(const void *instance, Var *args, const std::index_sequence<Indexes...> &sequence)
+inline kF::Var kF::Meta::Internal::Invoke(const void *instance, Var *args, std::index_sequence<Indexes...>)
 {
     using FunctionPtrType = decltype(FunctionPtr);
 
@@ -216,7 +216,7 @@ inline kF::Var kF::Meta::Internal::Invoke(const void *instance, Var *args, const
 }
 
 template<typename Type, bool AllowImplicitMove, typename Decomposer, typename Functor, std::size_t ...Indexes>
-inline kF::Var kF::Meta::Internal::Invoke(Functor &functor, [[maybe_unused]] const void *instance, Var *args, const std::index_sequence<Indexes...> &sequence)
+inline kF::Var kF::Meta::Internal::Invoke(Functor &functor, [[maybe_unused]] const void *instance, Var *args, std::index_sequence<Indexes...>)
 {
     constexpr auto Dispatch = [](auto &&functor, auto &&args) {
         if constexpr (std::is_same_v<typename Decomposer::ReturnType, void>) {

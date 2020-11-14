@@ -9,10 +9,10 @@
 
 using namespace kF;
 
-template <class From, class To, class = To>
+template<class From, class To, class = To>
 struct IsStaticCastable : std::false_type {};
 
-template <class From, class To>
+template<class From, class To>
 struct IsStaticCastable<From, To, decltype(static_cast<To>(std::declval<From>()))> : std::true_type {};
 
 #define RegisterConverterHelper(From, To) \
