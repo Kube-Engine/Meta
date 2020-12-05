@@ -4,7 +4,7 @@
  */
 
 template<typename Receiver, typename Functor>
-inline kF::Meta::SlotTable::Slot::Generation kF::Meta::SlotTable::Slot::assign(const void * const receiver, Functor &&functor) noexcept_forward_constructible(Functor)
+inline kF::Meta::SlotTable::Slot::Generation kF::Meta::SlotTable::Slot::assign(const void * const receiver, Functor &&functor) noexcept_forward_constructible(decltype(functor))
 {
     _receiver = receiver;
     _invokeFunc = [](Var &data, const void * const receiver, Var *arguments) {
@@ -41,7 +41,7 @@ inline kF::Var kF::Meta::SlotTable::Slot::invoke(const Generation generation, Va
 }
 
 template<typename Receiver, typename Functor>
-inline kF::Meta::SlotTable::Page::IndexAndGeneration kF::Meta::SlotTable::Page::insert(const void * const receiver, Functor &&functor) noexcept_forward_constructible(Functor)
+inline kF::Meta::SlotTable::Page::IndexAndGeneration kF::Meta::SlotTable::Page::insert(const void * const receiver, Functor &&functor) noexcept_forward_constructible(decltype(functor))
 {
     if (_sizeLeft) { // Use unasigned slots
         const Index index = PageSize - _sizeLeft;
@@ -82,7 +82,7 @@ inline kF::Meta::SlotTable::SlotTable(void) noexcept
 }
 
 template<typename Receiver, typename Functor>
-inline kF::Meta::SlotTable::OpaqueIndex kF::Meta::SlotTable::insert(const void * const receiver, Functor &&functor) noexcept_forward_constructible(Functor)
+inline kF::Meta::SlotTable::OpaqueIndex kF::Meta::SlotTable::insert(const void * const receiver, Functor &&functor) noexcept_forward_constructible(decltype(functor))
 {
     constexpr auto Dispatch = [](Page &page, const PageIndex pageIndex, const void * const receiver, auto &&functor) {
         return PackOpaqueIndex(pageIndex, page.insert<Receiver>(receiver, std::forward<Functor>(functor)));

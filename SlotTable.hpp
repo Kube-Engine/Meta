@@ -38,7 +38,7 @@ public:
 
         /** @brief Assign the slot from any functor */
         template<typename Receiver, typename Functor>
-        [[nodiscard]] Generation assign(const void * const receiver, Functor &&functor) noexcept_forward_constructible(Functor);
+        [[nodiscard]] Generation assign(const void * const receiver, Functor &&functor) noexcept_forward_constructible(decltype(functor));
 
         /** @brief Release the slot */
         [[nodiscard]] bool release(const Generation generation);
@@ -91,7 +91,7 @@ public:
 
         /** @brief Insert a new slot into the page */
         template<typename Receiver, typename Functor>
-        [[nodiscard]] IndexAndGeneration insert(const void *receiver, Functor &&functor) noexcept_forward_constructible(Functor);
+        [[nodiscard]] IndexAndGeneration insert(const void *receiver, Functor &&functor) noexcept_forward_constructible(decltype(functor));
 
         /** @brief Remove a slot from the page */
         void remove(const IndexAndGeneration indexAndGeneration);
@@ -134,11 +134,11 @@ public:
 
     /** @brief Insert a slot in the table (Receiver type must be set to void if no receiver is passed) */
     template<typename Receiver, typename Functor>
-    [[nodiscard]] OpaqueIndex insert(const void * const receiver, Functor &&functor) noexcept_forward_constructible(Functor);
+    [[nodiscard]] OpaqueIndex insert(const void * const receiver, Functor &&functor) noexcept_forward_constructible(decltype(functor));
 
     /** @brief Helper to insert non member slots */
     template<typename Functor>
-    [[nodiscard]] OpaqueIndex insert(Functor &&functor) noexcept_forward_constructible(Functor)
+    [[nodiscard]] OpaqueIndex insert(Functor &&functor) noexcept_forward_constructible(decltype(functor))
         { return insert<void>(nullptr, std::forward<Functor>(functor)); }
 
     /** @brief Remove a slot from the table */
