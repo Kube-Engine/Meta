@@ -3,75 +3,75 @@
  * @ Description: Meta Factory
  */
 
-template<typename Type>
-inline void kF::Meta::FactoryBase<Type>::Register(const HashedName name) noexcept_ndebug
+template<typename RegisteredType>
+inline void kF::Meta::FactoryBase<RegisteredType>::Register(const HashedName name) noexcept_ndebug
 {
-    kFAssert(GetDescriptor().name == 0,
+    kFAssert(_Descriptor.name == 0,
         throw std::logic_error("Factory::Register: Type already registered"));
-    GetDescriptor().name = name;
+    _Descriptor.name = name;
     Resolver::RegisterMetaType(Resolve());
 }
 
-template<typename Type>
+template<typename RegisteredType>
 template<typename Base>
-inline void kF::Meta::FactoryBase<Type>::RegisterBase(void) noexcept_ndebug
+inline void kF::Meta::FactoryBase<RegisteredType>::RegisterBase(void) noexcept_ndebug
 {
-    kFAssert(!Meta::Type(&GetDescriptor()).findBase(FactoryBase<Base>::Resolve()),
+    kFAssert(!GetType().findBase(FactoryBase<Base>::Resolve()),
         throw std::logic_error("Factory::RegisterBase: Base already registered"));
-    GetDescriptor().bases.push(FactoryBase<Base>::Resolve());
+    _Descriptor.bases.push(FactoryBase<Base>::Resolve());
 }
 
-template<typename Type>
+template<typename RegisteredType>
 template<typename ...Args>
-inline void kF::Meta::FactoryBase<Type>::RegisterConstructor(void) noexcept_ndebug
+inline void kF::Meta::FactoryBase<RegisteredType>::RegisterConstructor(void) noexcept_ndebug
 {
-    static auto descriptor { Constructor::Descriptor::Construct<Type, Args...>() };
+    static auto Descriptor = Constructor::Descriptor::Construct<RegisteredType, Args...>();
 
-    kFAssert(!Meta::Type(&GetDescriptor()).findConstructor<Args...>(),
+    kFAssert(!GetType().findConstructor<Args...>(),
         throw std::logic_error("Factory::RegisterConstructor: Constructor already registered"));
-    GetDescriptor().constructors.push(&descriptor);
+    _Descriptor.constructors.push(&Descriptor);
 }
 
-template<typename Type>
+template<typename RegisteredType>
 template<typename To, auto FunctionPtr>
-inline void kF::Meta::FactoryBase<Type>::RegisterConverter(void) noexcept_ndebug
+inline void kF::Meta::FactoryBase<RegisteredType>::RegisterConverter(void) noexcept_ndebug
 {
-    static auto descriptor { Converter::Descriptor::Construct<Type, To, FunctionPtr>() };
+    static auto Descriptor { Converter::Descriptor::Construct<RegisteredType, To, FunctionPtr>() };
 
-    kFAssert(!Meta::Type(&GetDescriptor()).findConverter(FactoryBase<To>::Resolve()),
+    kFAssert(!GetType().findConverter(FactoryBase<To>::Resolve()),
         throw std::logic_error("Factory::RegisterConverter: Converter already registered"));
-    GetDescriptor().converters.push(&descriptor);
+    _Descriptor.converters.push(&Descriptor);
 }
 
-template<typename Type>
+template<typename RegisteredType>
 template<auto FunctionPtr>
-inline void kF::Meta::FactoryBase<Type>::RegisterFunction(const HashedName name) noexcept_ndebug
+inline void kF::Meta::FactoryBase<RegisteredType>::RegisterFunction(const HashedName name) noexcept_ndebug
 {
-    static auto descriptor { Function::Descriptor::Construct<Type, FunctionPtr>(name) };
+    static auto Descriptor = Function::Descriptor::Construct<RegisteredType, FunctionPtr>(name);
 
-    kFAssert(!Meta::Type(&GetDescriptor()).findFunction(name),
+    kFAssert(!GetType().findFunction(name),
         throw std::logic_error("Factory::RegisterFunction: Function already registered"));
-    GetDescriptor().functions.push(&descriptor);
+    _Descriptor.functions.push(&Descriptor);
 }
 
-template<typename Type>
+template<typename RegisteredType>
 template<auto GetFunctionPtr, auto SetFunctionPtr>
-inline void kF::Meta::FactoryBase<Type>::RegisterData(const HashedName name, const Signal signal) noexcept_ndebug
+inline void kF::Meta::FactoryBase<RegisteredType>::RegisterData(const HashedName name, const Signal signal) noexcept_ndebug
 {
-    static auto descriptor { Data::Descriptor::Construct<Type, GetFunctionPtr, SetFunctionPtr>(name, signal) };
+    static auto Descriptor = Data::Descriptor::Construct<RegisteredType, GetFunctionPtr, SetFunctionPtr>(name, signal);
 
-    kFAssert(!Meta::Type(&GetDescriptor()).findData(name),
+    kFAssert(!GetType().findData(name),
         throw std::logic_error("Factory::RegisterData: Data already registered"));
-    GetDescriptor().datas.push(&descriptor);
+    _Descriptor.datas.push(&Descriptor);
 }
 
-template<typename Type>
+template<typename RegisteredType>
 template<auto SignalPtr>
-inline void kF::Meta::FactoryBase<Type>::RegisterSignal(const HashedName name) noexcept_ndebug
+inline void kF::Meta::FactoryBase<RegisteredType>::RegisterSignal(const HashedName name) noexcept_ndebug
 {
-    static auto descriptor { Signal::Descriptor::Construct<SignalPtr>(name) };
+    static auto Descriptor = Signal::Descriptor::Construct<SignalPtr>(name);
 
-    kFAssert(!Meta::Type(&GetDescriptor()).findSignal<SignalPtr>(),
+    kFAssert(!GetType().findSignal<SignalPtr>(),
         throw std::logic_error("Factory::RegisterSignal: Signal already registered"));
-    GetDescriptor().signals.push(&descriptor);
+    _Descriptor.signals.push(&Descriptor);
 }

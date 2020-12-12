@@ -18,6 +18,7 @@ set(KubeMetaSources
     ${KubeMetaDir}/Function.ipp
     ${KubeMetaDir}/Resolver.hpp
     ${KubeMetaDir}/Resolver.ipp
+    ${KubeMetaDir}/Registerer.hpp
     ${KubeMetaDir}/SlotTable.hpp
     ${KubeMetaDir}/SlotTable.ipp
     ${KubeMetaDir}/Signal.hpp

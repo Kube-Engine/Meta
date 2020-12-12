@@ -9,14 +9,14 @@
 
 namespace kF::Meta
 {
-    template<typename Type>
+    template<typename RegisteredType>
     class FactoryBase;
 }
 
 /**
  * @brief Factory is used to instantiate meta-data of a given type
  */
-template<typename Type>
+template<typename RegisteredType>
 class kF::Meta::FactoryBase
 {
 public:
@@ -54,7 +54,7 @@ public:
     static void RegisterSignal(const HashedName name) noexcept_ndebug;
 
     /** @brief Resolve the templated type's meta descriptor */
-    [[nodiscard]] static Meta::Type Resolve(void) noexcept { return Meta::Type(&Factory<Type>::GetDescriptor()); }
+    [[nodiscard]] static Type Resolve(void) noexcept { return Factory<RegisteredType>::GetType(); }
 
     /** @brief Default construct */
     FactoryBase(void) noexcept = default;
@@ -91,11 +91,11 @@ public:
 
 private:
     /** @brief Static helper used to store the descriptor instance of the templated type */
-    static Meta::Type::Descriptor &GetDescriptor(void) {
-        static Meta::Type::Descriptor data { Meta::Type::Descriptor::Construct<Type>() };
-        return data;
-    }
+    static inline Type::Descriptor _Descriptor { Type::Descriptor::Construct<RegisteredType>() };
+
+    [[nodiscard]] static inline Type GetType(void) noexcept { return Type(&_Descriptor); }
+
 };
 
-template<typename Type>
-class kF::Meta::Factory : public FactoryBase<std::remove_cvref_t<Type>> {};
+template<typename RegisteredType>
+class kF::Meta::Factory : public FactoryBase<std::remove_cvref_t<RegisteredType>> {};

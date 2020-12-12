@@ -5,6 +5,8 @@
 
 #pragma once
 
+#include <Kube/Core/Vector.hpp>
+
 #include "Type.hpp"
 
 /**
@@ -13,10 +15,20 @@
 class kF::Meta::Resolver
 {
 public:
-    using Descriptors = std::vector<Type>;
+    struct TemplateDescriptor
+    {
+        HashedName name { 0u };
+    };
+
+    using Descriptors = Core::Vector<Type>;
+    using TemplateDescriptors = Core::Vector<TemplateDescriptor>;
 
     /** @brief Register a new type into the resolver */
     static void RegisterMetaType(Type type) noexcept_ndebug;
+
+    /** @brief Register a new type into the resolver */
+    static void RegisterTemplateType(const HashedName name) noexcept_ndebug;
+
 
     /** @brief Resolve a type with its ID */
     [[nodiscard]] static Type FindType(const Type::TypeID id) noexcept;
@@ -24,16 +36,18 @@ public:
     /** @brief Resolve a type with its name */
     [[nodiscard]] static Type FindType(const HashedName name) noexcept;
 
+
+    /** @brief Resolve a type with its name */
+    [[nodiscard]] static bool TemplateExists(const HashedName name) noexcept;
+
+
     /** @brief Clear all stored types */
     static void Clear(void) noexcept;
 
 private:
+    static inline Descriptors _Descriptors {};
+    static inline TemplateDescriptors _TemplateDescriptors {};
+
     /** @brief Resolver is a singleton */
     Resolver(void) = delete;
-
-    /** @brief Get internal list of descriptors */
-    static Descriptors &GetDescriptors(void) noexcept {
-        static Descriptors data;
-        return data;
-    }
 };

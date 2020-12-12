@@ -18,7 +18,7 @@ namespace kF
         class Data;
         class SlotTable;
         class Signal;
-        template<typename Type>
+        template<typename RegisteredType>
         class Factory;
         class Resolver;
     }

@@ -5,7 +5,7 @@
 
 #include <string>
 
-#include "Meta.hpp"
+#include "Registerer.hpp"
 
 using namespace kF;
 
@@ -47,6 +47,7 @@ void Meta::RegisterMetadata(void)
     RegisterType(float,             "float");
     RegisterType(double,            "double");
     RegisterType(std::string,       "string");
+    Registerer::RegisterMetadata();
 }
 
 #undef RegisterConverterHelper
