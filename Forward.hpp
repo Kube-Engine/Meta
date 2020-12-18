@@ -18,8 +18,12 @@ namespace kF
         class Data;
         class SlotTable;
         class Signal;
-        template<typename RegisteredType>
-        class Factory;
         class Resolver;
+
+        template<typename RegisteredType>
+        class FactoryBase;
+
+        template<typename RegisteredType>
+        using Factory = FactoryBase<std::remove_cvref_t<RegisteredType>>;
     }
 }

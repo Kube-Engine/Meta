@@ -6,6 +6,7 @@
 #pragma once
 
 #include <Kube/Core/Vector.hpp>
+#include <Kube/Core/FlatVector.hpp>
 
 #include "Type.hpp"
 
@@ -15,19 +16,25 @@
 class kF::Meta::Resolver
 {
 public:
-    struct TemplateDescriptor
+    /** @brief Describe a template class */
+    struct alignas_quarter_cacheline TemplateDescriptor
     {
-        HashedName name { 0u };
+        HashedName name {};
+        Core::FlatVector<Type> specializations;
     };
 
-    using Descriptors = Core::Vector<Type>;
-    using TemplateDescriptors = Core::Vector<TemplateDescriptor>;
+    /** @brief Cache stored in static memory */
+    struct alignas_cacheline Cache
+    {
+        Core::Vector<Type> types;
+        Core::Vector<TemplateDescriptor> templates;
+    };
 
     /** @brief Register a new type into the resolver */
-    static void RegisterMetaType(Type type) noexcept_ndebug;
+    static void RegisterMetaType(const Type type) noexcept_ndebug;
 
     /** @brief Register a new type into the resolver */
-    static void RegisterTemplateType(const HashedName name) noexcept_ndebug;
+    static void RegisterMetaTemplateSpecialization(const HashedName name, const Type specialization) noexcept_ndebug;
 
 
     /** @brief Resolve a type with its ID */
@@ -37,16 +44,21 @@ public:
     [[nodiscard]] static Type FindType(const HashedName name) noexcept;
 
 
-    /** @brief Resolve a type with its name */
-    [[nodiscard]] static bool TemplateExists(const HashedName name) noexcept;
+    /** @brief Resolve a template type with its name */
+    [[nodiscard]] static const TemplateDescriptor *FindTemplate(const HashedName name) noexcept;
+
+    /** @brief Resolve a template specialization with its name and specialization name */
+    [[nodiscard]] static Type FindTemplateSpecialization(const HashedName name, const HashedName specializationName) noexcept;
+
+    /** @brief Resolve a template specialization with its descriptor and specialization name */
+    [[nodiscard]] static Type FindTemplateSpecialization(const TemplateDescriptor *descriptor, const HashedName specializationName) noexcept;
 
 
     /** @brief Clear all stored types */
     static void Clear(void) noexcept;
 
 private:
-    static inline Descriptors _Descriptors {};
-    static inline TemplateDescriptors _TemplateDescriptors {};
+    static inline Cache _Cache {};
 
     /** @brief Resolver is a singleton */
     Resolver(void) = delete;

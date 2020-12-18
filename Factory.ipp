@@ -4,74 +4,137 @@
  */
 
 template<typename RegisteredType>
-inline void kF::Meta::FactoryBase<RegisteredType>::Register(const HashedName name) noexcept_ndebug
+inline void kF::Meta::FactoryBase<RegisteredType>::Register(const HashedName name, const HashedName specialization) noexcept_ndebug
 {
     kFAssert(_Descriptor.name == 0,
         throw std::logic_error("Factory::Register: Type already registered"));
-    _Descriptor.name = name;
-    Resolver::RegisterMetaType(Resolve());
+    _Descriptor.name = specialization;
+    if (name == specialization)
+        Resolver::RegisterMetaType(Resolve());
+    else
+        Resolver::RegisterMetaTemplateSpecialization(name, Resolve());
 }
 
 template<typename RegisteredType>
 template<typename Base>
 inline void kF::Meta::FactoryBase<RegisteredType>::RegisterBase(void) noexcept_ndebug
 {
-    kFAssert(!GetType().findBase(FactoryBase<Base>::Resolve()),
+    kFAssert(!Resolve().findBase(FactoryBase<Base>::Resolve()),
         throw std::logic_error("Factory::RegisterBase: Base already registered"));
     _Descriptor.bases.push(FactoryBase<Base>::Resolve());
 }
 
 template<typename RegisteredType>
 template<typename ...Args>
-inline void kF::Meta::FactoryBase<RegisteredType>::RegisterConstructor(void) noexcept_ndebug
+inline kF::Meta::Constructor kF::Meta::FactoryBase<RegisteredType>::RegisterConstructor(void) noexcept_ndebug
 {
-    static auto Descriptor = Constructor::Descriptor::Construct<RegisteredType, Args...>();
+    using FunctionIdentifier = Internal::FunctionIdentifier<FactoryBase<RegisteredType>::RegisterConstructor<Args...>>;
+    using DescriptorInstance = Internal::DescriptorInstance<Constructor::Descriptor, FunctionIdentifier>;
 
-    kFAssert(!GetType().findConstructor<Args...>(),
+    auto &descriptor = DescriptorInstance::Initialize(Constructor::Descriptor::Construct<RegisteredType, Args...>());
+
+    kFAssert(!Resolve().findConstructor<Args...>(),
         throw std::logic_error("Factory::RegisterConstructor: Constructor already registered"));
-    _Descriptor.constructors.push(&Descriptor);
+    _Descriptor.constructors.push(&descriptor);
+    return Constructor(&descriptor);
 }
 
 template<typename RegisteredType>
 template<typename To, auto FunctionPtr>
-inline void kF::Meta::FactoryBase<RegisteredType>::RegisterConverter(void) noexcept_ndebug
+inline kF::Meta::Converter kF::Meta::FactoryBase<RegisteredType>::RegisterConverter(void) noexcept_ndebug
 {
-    static auto Descriptor { Converter::Descriptor::Construct<RegisteredType, To, FunctionPtr>() };
+    using FunctionIdentifier = Internal::FunctionIdentifier<FactoryBase<RegisteredType>::RegisterConverter<To, FunctionPtr>>;
+    using DescriptorInstance = Internal::DescriptorInstance<Converter::Descriptor, FunctionIdentifier>;
 
-    kFAssert(!GetType().findConverter(FactoryBase<To>::Resolve()),
+    auto &descriptor = DescriptorInstance::Initialize(Converter::Descriptor::Construct<RegisteredType, To, FunctionPtr>());
+
+    kFAssert(!Resolve().findConverter(FactoryBase<To>::Resolve()),
         throw std::logic_error("Factory::RegisterConverter: Converter already registered"));
-    _Descriptor.converters.push(&Descriptor);
+    _Descriptor.converters.push(&descriptor);
+    return Converter(&descriptor);
 }
 
 template<typename RegisteredType>
 template<auto FunctionPtr>
-inline void kF::Meta::FactoryBase<RegisteredType>::RegisterFunction(const HashedName name) noexcept_ndebug
+inline kF::Meta::Function kF::Meta::FactoryBase<RegisteredType>::RegisterFunction(const HashedName name) noexcept_ndebug
 {
-    static auto Descriptor = Function::Descriptor::Construct<RegisteredType, FunctionPtr>(name);
+    using FunctionIdentifier = Internal::FunctionIdentifier<FactoryBase<RegisteredType>::RegisterFunction<FunctionPtr>>;
+    using DescriptorInstance = Internal::DescriptorInstance<Function::Descriptor, FunctionIdentifier>;
 
-    kFAssert(!GetType().findFunction(name),
+    auto &descriptor = DescriptorInstance::Initialize(Function::Descriptor::Construct<RegisteredType, FunctionPtr>(name));
+
+    kFAssert(!Resolve().findFunction(name),
         throw std::logic_error("Factory::RegisterFunction: Function already registered"));
-    _Descriptor.functions.push(&Descriptor);
+    _Descriptor.functions.push(&descriptor);
+    return Function(&descriptor);
 }
 
 template<typename RegisteredType>
-template<auto GetFunctionPtr, auto SetFunctionPtr>
-inline void kF::Meta::FactoryBase<RegisteredType>::RegisterData(const HashedName name, const Signal signal) noexcept_ndebug
+template<auto GetFunctionPtr, auto SetFunctionPtr, auto SignalPtr>
+inline kF::Meta::Data kF::Meta::FactoryBase<RegisteredType>::RegisterData(const HashedName name, const HashedName signalName) noexcept_ndebug
 {
-    static auto Descriptor = Data::Descriptor::Construct<RegisteredType, GetFunctionPtr, SetFunctionPtr>(name, signal);
+    using SetDecomposer = Internal::FunctionDecomposerHelper<decltype(SetFunctionPtr)>;
 
-    kFAssert(!GetType().findData(name),
+    if constexpr (SetFunctionPtr) {
+        static_assert(std::tuple_size_v<typename SetDecomposer::ArgsTuple> == 1, "Meta-data's copy setter must take only one argument");
+    }
+
+    constexpr auto SetCopyFunctionPtr = [] {
+        if constexpr (SetFunctionPtr) {
+            if constexpr (std::is_rvalue_reference_v<std::tuple_element_t<0u, typename SetDecomposer::ArgsTuple>>)
+                return static_cast<decltype(SetFunctionPtr)>(nullptr);
+        }
+        return SetFunctionPtr;
+    }();
+    constexpr auto SetMoveFunctionPtr = [] {
+        if constexpr (SetFunctionPtr) {
+            if constexpr (!std::is_rvalue_reference_v<std::tuple_element_t<0u, typename SetDecomposer::ArgsTuple>>)
+                return static_cast<decltype(SetFunctionPtr)>(nullptr);
+        }
+        return SetFunctionPtr;
+    }();
+
+    return RegisterData<GetFunctionPtr, SetCopyFunctionPtr, SetMoveFunctionPtr, SignalPtr>(name, signalName);
+}
+
+template<typename RegisteredType>
+template<auto GetFunctionPtr, auto SetCopyFunctionPtr, auto SetMoveFunctionPtr, auto SignalPtr>
+inline kF::Meta::Data kF::Meta::FactoryBase<RegisteredType>::RegisterData(const HashedName name, const HashedName signalName) noexcept_ndebug
+{
+    using FunctionIdentifier = Internal::FunctionIdentifier<FactoryBase<RegisteredType>::RegisterData<GetFunctionPtr, SetCopyFunctionPtr, SetMoveFunctionPtr, SignalPtr>>;
+    using DescriptorInstance = Internal::DescriptorInstance<Data::Descriptor, FunctionIdentifier>;
+
+    auto &descriptor = DescriptorInstance::Initialize(
+        Data::Descriptor::Construct<
+            RegisteredType,
+            GetFunctionPtr,
+            SetCopyFunctionPtr,
+            SetMoveFunctionPtr
+        >(name, [signalName] {
+            if constexpr (SignalPtr)
+                return RegisterSignal<SignalPtr>(signalName);
+            else
+                return Signal();
+        }())
+    );
+
+    kFAssert(!Resolve().findData(name),
         throw std::logic_error("Factory::RegisterData: Data already registered"));
-    _Descriptor.datas.push(&Descriptor);
+    _Descriptor.datas.push(&descriptor);
+    return Data(&descriptor);
 }
 
 template<typename RegisteredType>
 template<auto SignalPtr>
-inline void kF::Meta::FactoryBase<RegisteredType>::RegisterSignal(const HashedName name) noexcept_ndebug
+inline kF::Meta::Signal kF::Meta::FactoryBase<RegisteredType>::RegisterSignal(const HashedName name) noexcept_ndebug
 {
-    static auto Descriptor = Signal::Descriptor::Construct<SignalPtr>(name);
+    using FunctionIdentifier = Internal::FunctionIdentifier<FactoryBase<RegisteredType>::RegisterSignal<SignalPtr>>;
+    using DescriptorInstance = Internal::DescriptorInstance<Signal::Descriptor, FunctionIdentifier>;
 
-    kFAssert(!GetType().findSignal<SignalPtr>(),
+    auto &descriptor = DescriptorInstance::Initialize(Signal::Descriptor::Construct<SignalPtr>(name));
+
+    kFAssert(!Resolve().findSignal<SignalPtr>(),
         throw std::logic_error("Factory::RegisterSignal: Signal already registered"));
-    _Descriptor.signals.push(&Descriptor);
+    _Descriptor.signals.push(&descriptor);
+    return Signal(&descriptor);
 }

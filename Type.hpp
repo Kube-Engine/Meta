@@ -74,14 +74,17 @@ public:
         Core::FlatVector<Signal> signals {};
 
         template<typename Type>
-        static Descriptor Construct(void) noexcept;
+        [[nodiscard]] static Descriptor Construct(void) noexcept;
     };
 
     static_assert_sizeof(Descriptor, Core::CacheLineSize * 4);
     static_assert_alignof_double_cacheline(Descriptor);
 
+    /** @brief Default constructor */
+    Type(void) = default;
+
     /** @brief Construct passing a descriptor instance */
-    Type(Descriptor *desc = nullptr) noexcept : _desc(desc) {}
+    Type(Descriptor *desc) noexcept : _desc(desc) {}
 
     /** @brief Copy constructor */
     Type(const Type &other) noexcept = default;

@@ -11,6 +11,7 @@
 #include <utility>
 #include <tuple>
 #include <functional>
+#include <optional>
 
 #include <Kube/Core/Hash.hpp>
 #include <Kube/Core/Assert.hpp>
@@ -129,12 +130,13 @@ namespace kF
 
             /** @brief Helper function used to instantiate a dummy variable for a given function */
             template<auto FunctionPtr>
-            struct FunctionIdentifier
+            class FunctionIdentifier
             {
-                static OpaqueFunction Get(void) noexcept {
-                    static const int dummy = 0;
-                    return static_cast<OpaqueFunction>(&dummy);
-                }
+            public:
+                static inline OpaqueFunction Get(void) noexcept { return static_cast<OpaqueFunction>(&_Dummy); }
+
+            private:
+                static inline int _Dummy = 0;
             };
 
             /** @brief Helper used to retreive a function identifier */
@@ -281,6 +283,21 @@ namespace kF
                     return static_cast<const void *>(input);
                 else
                     return static_cast<const void *>(&input);
+            };
+
+
+            /** @brief This class should be instantiated for each meta descriptor to provide a globally re-initializable instance */
+            template<typename Descriptor, typename UniqueTag>
+            class DescriptorInstance
+            {
+            public:
+                /** @brief Initialize the descriptor */
+                template<typename ...Args>
+                [[nodiscard]] static inline Descriptor &Initialize(Args &&...args)
+                    { return _Descriptor.emplace(std::forward<Args>(args)...); }
+
+            private:
+                static inline std::optional<Descriptor> _Descriptor {};
             };
         }
     }

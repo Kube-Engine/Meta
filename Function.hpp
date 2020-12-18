@@ -27,7 +27,7 @@ public:
         const InvokeFunc invokeFunc;
 
         template<typename Type, auto FunctionPtr>
-        static Descriptor Construct(const HashedName name) noexcept;
+        [[nodiscard]] static Descriptor Construct(const HashedName name) noexcept;
     };
 
     static_assert_fit_half_cacheline(Descriptor);

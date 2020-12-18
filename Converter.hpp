@@ -23,7 +23,7 @@ public:
 
         /** @brief Construct a Descriptor */
         template<typename From, typename To, auto FunctionPtr>
-        static Descriptor Construct(void) noexcept;
+        [[nodiscard]] static Descriptor Construct(void) noexcept;
     };
 
     static_assert_fit_quarter_cacheline(Descriptor);

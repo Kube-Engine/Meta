@@ -8,15 +8,12 @@
 #include <Kube/Core/TrivialDispatcher.hpp>
 
 #include "Meta.hpp"
+#include "TemplateDecomposer.hpp"
 
 namespace kF::Meta
 {
     class Registerer;
-
-    template<auto Functor>
     struct RegisterLater;
-
-    template<auto Functor>
     struct RegisterTemplateLater;
 }
 
@@ -24,22 +21,35 @@ namespace kF::Meta
 class kF::Meta::Registerer
 {
 public:
+    struct alignas_cacheline Cache
+    {
+        Core::Vector<Core::TrivialFunctor<void(void)>> types;
+        Core::Vector<Core::TrivialFunctor<void(void)>> templates;
+    };
+
     /** @brief Register every type registered with 'RegisterLater' methods */
     static void RegisterMetadata(void)
-        { _Dispatcher.dispatch(); _TemplateDispatcher.dispatch(); }
-
+    {
+        for (auto &func : _Cache.types)
+            func();
+        for (auto &func : _Cache.templates)
+            func();
+    }
 
     /** @brief Store a functor to be called at class registration time */
-    template<auto Functor>
-    static void RegisterLater(void) { _Dispatcher.add(Functor); }
+    template<typename Type, typename Functor>
+    static void RegisterLater(Functor &&functor)
+    {
+        using Decomposer = Internal::TemplateDecomposer<Type>;
 
-    /** @brief Store a functor to be called at template registration time */
-    template<auto Functor>
-    static void RegisterTemplateLater(void) { _TemplateDispatcher.add(Functor); }
+        if constexpr (!Decomposer::IsTemplate)
+            _Cache.types.push(std::forward<Functor>(functor));
+        else
+            _Cache.templates.push(std::forward<Functor>(functor));
+    }
 
 private:
-    static inline Core::TrivialDispatcher<void(void)> _Dispatcher {};
-    static inline Core::TrivialDispatcher<void(void)> _TemplateDispatcher {};
+    static inline Cache _Cache;
 
     /** @brief Registerer is a singleton */
     Registerer(void);
@@ -47,15 +57,13 @@ private:
 };
 
 /** @brief Helper used to register a class later in registerer */
-template<auto Functor>
-struct kF::Meta::RegisterLater
+class kF::Meta::RegisterLater
 {
-    RegisterLater(void) { Registerer::RegisterLater<Functor>(); }
-};
-
-/** @brief Helper used to register a template class later in registerer */
-template<auto Functor>
-struct kF::Meta::RegisterTemplateLater
-{
-    RegisterTemplateLater(void) { Registerer::RegisterTemplateLater<Functor>(); }
+public:
+    template<typename Type, typename Functor>
+    [[nodiscard]] static RegisterLater Make(Functor &&functor) noexcept
+    {
+        Registerer::RegisterLater<Type>(std::forward<Functor>(functor));
+        return RegisterLater();
+    }
 };

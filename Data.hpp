@@ -15,23 +15,23 @@ class kF::Meta::Data
 {
 public:
     using GetFunc = Var(*)(const void *);
-    using SetFunc = Var(*)(const void *, Var &);
+    using SetCopyFunc = Var(*)(const void *, const Var &);
+    using SetMoveFunc = Var(*)(const void *, Var &&);
 
     /** @brief Describe a meta data */
     struct alignas_cacheline Descriptor
     {
         const HashedName name;
-        const bool isStatic;
-        const bool isMoveOnly;
-        const char _padding[2];
+        const bool isStatic : 4;
         const Type type;
         const GetFunc getFunc;
-        const SetFunc setFunc;
+        const SetCopyFunc setCopyFunc;
+        const SetMoveFunc setMoveFunc;
         const Signal signal;
 
         /** @brief Construct a Descriptor */
-        template<typename Type, auto GetFunctionPtr, auto SetFunctionPtr>
-        static Descriptor Construct(const HashedName name, const Signal signal = Signal()) noexcept;
+        template<typename Type, auto GetFunctionPtr, auto SetCopyFunctionPtr, auto SetMoveFunctionPtr>
+        [[nodiscard]] static Descriptor Construct(const HashedName name, const Signal signal) noexcept;
     };
 
     static_assert_fit_cacheline(Descriptor);
@@ -52,29 +52,44 @@ public:
     [[nodiscard]] bool operator==(const Data &other) const noexcept { return _desc == other._desc; }
     [[nodiscard]] bool operator!=(const Data &other) const noexcept { return _desc != other._desc; }
 
+
     /** @brief Get data's hashed name */
     [[nodiscard]] HashedName name(void) const noexcept { return _desc->name; }
 
     /** @brief Check if the data is static */
     [[nodiscard]] bool isStatic(void) const noexcept { return _desc->isStatic; }
 
+    /** @brief Check if the variable is read-only */
+    [[nodiscard]] bool isReadOnly(void) const noexcept { return !_desc->setCopyFunc && !_desc->setMoveFunc; }
+
+    /** @brief Check if the variable is copy settable */
+    [[nodiscard]] bool isCopySettable(void) const noexcept { return _desc->setCopyFunc; }
+
+    /** @brief Check if the variable is move settable */
+    [[nodiscard]] bool isMoveSettable(void) const noexcept { return _desc->setMoveFunc; }
+
     /** @brief Get underlying data type */
     [[nodiscard]] Type type(void) const noexcept { return _desc->type; }
 
-    /** @brief Check if the variable is read-only */
-    [[nodiscard]] bool isReadOnly(void) const noexcept { return !_desc->setFunc; }
+    /** @brief Get underlying signal */
+    [[nodiscard]] Signal signal(void) const noexcept { return _desc->signal; }
+
 
     /** @brief Get the underlying instance */
     [[nodiscard]] Var get(const Var &instance) const { return (*_desc->getFunc)(instance.data()); }
     [[nodiscard]] Var get(const void *instance = nullptr) const { return (*_desc->getFunc)(instance); }
 
-    /** @brief Set the underlying instance */
+    /** @brief Call member setter using a opaque variable */
     template<typename Type>
     [[nodiscard]] Var set(const Var &instance, Type &&value) const { return set(instance.data(), std::forward<Type>(value)); }
-    template<typename Type>
-    [[nodiscard]] Var set(Type &&value) const { return set(nullptr, std::forward<Type>(value)); }
+
+    /** @brief Call member setter using a opaque pointer */
     template<typename Type>
     [[nodiscard]] Var set(const void *instance, Type &&value) const;
+
+    /** @brief Call static setter */
+    template<typename Type>
+    [[nodiscard]] Var set(Type &&value) const { return set(nullptr, std::forward<Type>(value)); }
 
 private:
     const Descriptor *_desc = nullptr;

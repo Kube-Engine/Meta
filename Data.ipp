@@ -3,33 +3,36 @@
  * @ Description: Meta Data
  */
 
-template<typename Type, auto GetFunctionPtr, auto SetFunctionPtr>
+template<typename Type, auto GetFunctionPtr, auto SetCopyFunctionPtr, auto SetMoveFunctionPtr>
 inline kF::Meta::Data::Descriptor kF::Meta::Data::Descriptor::Construct(const HashedName name, const Signal signal) noexcept
 {
     using GetFunctionType = decltype(GetFunctionPtr);
     using GetDecomposer = Internal::FunctionDecomposerHelper<GetFunctionType>;
-    using SetFunctionType = decltype(SetFunctionPtr);
-    using SetDecomposer = Internal::FunctionDecomposerHelper<SetFunctionType>;
+    using SetCopyFunctionType = decltype(SetCopyFunctionPtr);
+    using SetCopyDecomposer = Internal::FunctionDecomposerHelper<SetCopyFunctionType>;
+    using SetMoveFunctionType = decltype(SetMoveFunctionPtr);
+    using SetMoveDecomposer = Internal::FunctionDecomposerHelper<SetMoveFunctionType>;
 
     static_assert(GetFunctionPtr != nullptr, "A meta data must at least have a getter");
     static_assert(std::tuple_size_v<typename GetDecomposer::ArgsTuple> == 0, "A meta data must have a getter that take no argument");
 
     using FlatGetterReturnType = std::remove_cvref_t<typename Internal::FunctionDecomposerHelper<GetFunctionType>::ReturnType>;
 
-    if constexpr (SetFunctionPtr) {
-        static_assert(std::tuple_size_v<typename SetDecomposer::ArgsTuple> == 1, "A meta data must have a setter that take only one argument");
-        using FlatSetterArg = std::remove_cvref_t<std::tuple_element_t<0, typename SetDecomposer::ArgsTuple>>;
-        static_assert(std::is_same_v<FlatSetterArg, FlatGetterReturnType>, "A meta data must have a setter that takes the data type in parameter");
+    if constexpr (SetCopyFunctionPtr) {
+        static_assert(std::tuple_size_v<typename SetCopyDecomposer::ArgsTuple> == 1, "Meta-data's copy setter must take only one argument");
+        using SetterArg = std::tuple_element_t<0, typename SetCopyDecomposer::ArgsTuple>;
+        static_assert(std::is_same_v<SetterArg, const FlatGetterReturnType &>, "Meta-data's copy setter must take the data type as constant LValue reference in parameter");
+    }
+
+    if constexpr (SetMoveFunctionPtr) {
+        static_assert(std::tuple_size_v<typename SetMoveDecomposer::ArgsTuple> == 1, "Meta-data's move setter must take only one argument");
+        using SetterArg = std::tuple_element_t<0, typename SetMoveDecomposer::ArgsTuple>;
+        static_assert(std::is_same_v<SetterArg, FlatGetterReturnType &&>, "Meta-data's move setter must take the data type as RValue in parameter");
     }
 
     return Descriptor {
         name: name,
         isStatic: GetDecomposer::IsFunctor || !GetDecomposer::IsMember,
-        isMoveOnly: ConstexprTernary(
-            SetFunctionPtr,
-            (std::is_rvalue_reference_v<std::tuple_element_t<0, typename SetDecomposer::ArgsTuple>>),
-            false
-        ),
         type: Factory<typename GetDecomposer::ReturnType>::Resolve(),
         getFunc: [](const void *instance) -> Var {
             if constexpr (GetDecomposer::IsFunctor)
@@ -39,10 +42,17 @@ inline kF::Meta::Data::Descriptor kF::Meta::Data::Descriptor::Construct(const Ha
             else
                 return Var::Assign((*GetFunctionPtr)());
         },
-        setFunc: ConstexprTernary(
-            SetFunctionPtr,
-            ([]([[maybe_unused]] const void *instance, Var &value) -> Var {
-                return Internal::Invoke<Type, SetFunctionPtr, true, SetDecomposer>(instance, &value, SetDecomposer::IndexSequence);
+        setCopyFunc: ConstexprTernary(
+            SetCopyFunctionPtr,
+            ([]([[maybe_unused]] const void *instance, const Var &value) -> Var {
+                return Internal::Invoke<Type, SetCopyFunctionPtr, true, SetCopyDecomposer>(instance, const_cast<Var *>(&value), SetCopyDecomposer::IndexSequence);
+            }),
+            nullptr
+        ),
+        setMoveFunc: ConstexprTernary(
+            SetMoveFunctionPtr,
+            ([]([[maybe_unused]] const void *instance, Var &&value) -> Var {
+                return Internal::Invoke<Type, SetMoveFunctionPtr, true, SetMoveDecomposer>(instance, &value, SetMoveDecomposer::IndexSequence);
             }),
             nullptr
         ),
@@ -53,15 +63,27 @@ inline kF::Meta::Data::Descriptor kF::Meta::Data::Descriptor::Construct(const Ha
 template<typename Type>
 inline kF::Var kF::Meta::Data::set(const void *instance, Type &&value) const
 {
-    kFAssert(!isReadOnly(),
-        throw std::runtime_error("Meta::Data::set: Data is read only"));
-    if constexpr (std::is_same_v<std::remove_cvref_t<decltype(value)>, Var>) {
-        if constexpr (std::is_const_v<std::remove_reference_t<decltype(value)>>)
-            return (*_desc->setFunc)(instance, const_cast<Var &>(value));
-        else
-            return (*_desc->setFunc)(instance, value);
+    constexpr auto IsRValue = std::is_rvalue_reference_v<decltype(value)>;
+
+    if constexpr (IsRValue) {
+        kFAssert(isCopySettable() || isMoveSettable(),
+            throw std::runtime_error("Meta::Data::set: Value is RValue and data is not move settable"));
     } else {
-        auto var = kF::Var::Assign(std::forward<Type>(value));
-        return (*_desc->setFunc)(instance, var);
+        kFAssert(isCopySettable(),
+            throw std::runtime_error("Meta::Data::set: Value is constant LValue and data is not copy settable"));
+    }
+
+    if constexpr (std::is_same_v<std::remove_cvref_t<Type>, Var>) {
+        if constexpr (IsRValue) {
+            if (isMoveSettable()) [[likely]]
+                return (*_desc->setMoveFunc)(instance, std::move(value));
+        }
+        return (*_desc->setCopyFunc)(instance, value);
+    } else {
+        if constexpr (IsRValue) {
+            if (isMoveSettable()) [[likely]]
+                return (*_desc->setMoveFunc)(instance, kF::Var::Assign(std::forward<Type>(value)));
+        }
+        return (*_desc->setCopyFunc)(instance, kF::Var::Assign(std::forward<Type>(value)));
     }
 }

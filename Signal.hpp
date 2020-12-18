@@ -25,7 +25,7 @@ public:
         const std::uint32_t argsCount { 0 };
 
         template<auto SignalPtr>
-        static Descriptor Construct(const HashedName name) noexcept;
+        [[nodiscard]] static Descriptor Construct(const HashedName name) noexcept;
     };
 
     static_assert_fit_quarter_cacheline(Descriptor);

@@ -92,6 +92,7 @@ public:
     /** @brief Checks if the instance is not empty */
     [[nodiscard]] explicit operator bool(void) const noexcept { return _type.operator bool(); }
 
+
     /** @brief Assigns a variable internally */
     template<typename Type, ShouldDestructInstance DestructInstance = ShouldDestructInstance::Yes>
     void assign(Type &&other);
@@ -105,6 +106,7 @@ public:
     void emplace(Args &&...args)
         noexcept(DestructInstance == ShouldDestructInstance::No && nothrow_constructible(Type, Args...));
 
+
     /** @brief Construct semantic */
     template<ShouldDestructInstance DestructInstance = ShouldDestructInstance::Yes, typename ...Args>
     void construct(const HashedName name, Args &&...args);
@@ -112,6 +114,7 @@ public:
     /** @brief Release internal type */
     template<ShouldResetMembers ResetMembers = ShouldResetMembers::Yes>
     void destruct(void);
+
 
     /** @brief Get internal type */
     [[nodiscard]] Meta::Type type(void) const noexcept { return _type; }
@@ -128,6 +131,7 @@ public:
     /** @brief Check if type is void */
     [[nodiscard]] bool isVoid(void) const noexcept { return _type.isVoid(); }
 
+
     /** @brief Retreive opaque internal data */
     [[nodiscard]] void *data(void) const noexcept
         { return isSmallOptimizedValue() ? data<UseSmallOptimization::Yes>() : data<UseSmallOptimization::No>(); }
@@ -141,6 +145,7 @@ public:
     [[nodiscard]] Type &as(void) noexcept { return *reinterpret_cast<std::remove_cvref_t<Type> *>(data()); }
     template<typename Type>
     [[nodiscard]] const Type &as(void) const noexcept { return *reinterpret_cast<const std::remove_cvref_t<Type> *>(data()); }
+
 
     /** @brief Tries to cast internal to himself or base type (If impossible, will throw in debug or crash in release */
     template<typename Type>
@@ -158,6 +163,7 @@ public:
     template<typename Type>
     [[nodiscard]] bool isCastAble(void) const noexcept
         { return _type.typeID() == typeid(Type) || type().findBase(Meta::Factory<Type>::Resolve()); }
+
 
     /** @brief Tries to convert current instance into given type */
     template<typename To>
@@ -180,6 +186,7 @@ public:
     /** @brief Tries to convert internal to boolean */
     [[nodiscard]] bool toBool(void) const;
 
+
     /** @brief Various opaque operators helpers */
     [[nodiscard]] Var operator+(const Var &rhs) const;
     [[nodiscard]] Var operator-(const Var &rhs) const;
@@ -191,6 +198,7 @@ public:
     Var &operator*=(const Var &rhs);
     Var &operator/=(const Var &rhs);
     Var &operator%=(const Var &rhs);
+
 
     /** @brief Various non-opaque operators helpers */
     template<typename Type>

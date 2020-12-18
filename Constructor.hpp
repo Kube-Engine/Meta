@@ -21,7 +21,7 @@ public:
         const InvokeFunc invokeFunc;
 
         template<typename Type, typename ...Args> requires std::constructible_from<Type, Args...>
-        static Descriptor Construct(void) noexcept;
+        [[nodiscard]] static Descriptor Construct(void) noexcept;
     };
 
     static_assert_fit_half_cacheline(Descriptor);

@@ -3,6 +3,7 @@ project(KubeMetaTests)
 get_filename_component(KubeMetaTestsDir ${CMAKE_CURRENT_LIST_FILE} PATH)
 
 set(KubeMetaTestsSources
+    ${KubeMetaTestsDir}/tests_TemplateDecomposer.cpp
     ${KubeMetaTestsDir}/tests_Constructor.cpp
     ${KubeMetaTestsDir}/tests_Converter.cpp
     ${KubeMetaTestsDir}/tests_Data.cpp
