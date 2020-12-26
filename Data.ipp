@@ -21,7 +21,7 @@ inline kF::Meta::Data::Descriptor kF::Meta::Data::Descriptor::Construct(const Ha
     if constexpr (SetCopyFunctionPtr) {
         static_assert(std::tuple_size_v<typename SetCopyDecomposer::ArgsTuple> == 1, "Meta-data's copy setter must take only one argument");
         using SetterArg = std::tuple_element_t<0, typename SetCopyDecomposer::ArgsTuple>;
-        static_assert(std::is_same_v<SetterArg, const FlatGetterReturnType &>, "Meta-data's copy setter must take the data type as constant LValue reference in parameter");
+        static_assert(std::is_convertible_v<SetterArg, const FlatGetterReturnType &>, "Meta-data's copy setter must take the data type as constant LValue reference in parameter");
     }
 
     if constexpr (SetMoveFunctionPtr) {
