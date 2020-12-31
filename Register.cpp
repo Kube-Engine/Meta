@@ -4,6 +4,7 @@
  */
 
 #include <string>
+#include <iostream>
 
 #include "Registerer.hpp"
 
@@ -20,7 +21,8 @@ struct IsStaticCastable<From, To, decltype(static_cast<To>(std::declval<From>())
         kF::Meta::Factory<From>::RegisterConverter<To>(); \
 
 #define RegisterType(Type, Alias) \
-    kF::Meta::Factory<Type>::Register(Hash(Alias)); \
+    std::cout << "[ Registering base meta-type '" << Alias << "' ]" << std::endl; \
+    kF::Meta::Factory<Type>::Register(Hash(Alias), Alias); \
     RegisterConverterHelper(Type, bool); \
     RegisterConverterHelper(Type, std::int8_t); \
     RegisterConverterHelper(Type, std::int16_t); \

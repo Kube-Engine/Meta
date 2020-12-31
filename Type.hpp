@@ -6,6 +6,7 @@
 #pragma once
 
 #include <Kube/Core/FlatVector.hpp>
+#include <Kube/Core/FlatString.hpp>
 
 #include "Base.hpp"
 
@@ -41,27 +42,28 @@ public:
     struct alignas_double_cacheline Descriptor
     {
         // --- Cacheline 1 ---
-        /* Type description - 24 bytes */
+        /* Type description - 32 bytes */
         const TypeID typeID; // Unique type identifier
         const std::size_t typeSize; // Size of the type
         HashedName name; // Hashed name of the type
-        Flags flags; // Flags that describe the type
+        const Flags flags; // Flags that describe the type
+        Core::FlatString literal; // Type literal
 
         /* Type semantics - 56 bytes */
+        const DestructorFunc destructFunc;
         const DefaultConstructorFunc defaultConstructFunc;
         const CopyConstructorFunc copyConstructFunc;
         const MoveConstructorFunc moveConstructFunc;
+        // --- Cacheline 2 ---
         const CopyAssignmentFunc copyAssignmentFunc;
         const MoveAssignmentFunc moveAssignmentFunc;
-        // --- Cacheline 2 ---
-        const DestructorFunc destructFunc;
         const ToBoolFunc toBoolFunc;
 
         /* Fast unary and binary operators - 88 bytes */
         const UnaryOperatorFunc unaryFuncs[static_cast<int>(UnaryOperator::Total)] { nullptr };
         const BinaryOperatorFunc binaryFuncs[static_cast<int>(BinaryOperator::Total)] { nullptr };
         const AssignmentOperatorFunc assignmentFuncs[static_cast<int>(AssignmentOperator::Total)] { nullptr };
-        char _padding[40]; // Padding to the next cacheline
+        char _padding[32]; // Padding to the next cacheline
 
         // --- Cacheline 4 ---
 
@@ -104,6 +106,9 @@ public:
 
     /** @brief Retreive type's name */
     [[nodiscard]] HashedName name(void) const noexcept { return _desc->name; }
+
+    /** @brief Retreive type's name */
+    [[nodiscard]] std::string_view literal(void) const noexcept { return _desc->literal.toStdView(); }
 
     /** @brief Retreive type' size */
     [[nodiscard]] std::size_t typeSize(void) const noexcept { return _desc->typeSize; }

@@ -5,10 +5,8 @@
 
 #pragma once
 
-#include <array>
-#include <vector>
-
-#include <Kube/Core/FlatVector.hpp>
+#include <Kube/Core/Vector.hpp>
+#include <Kube/Core/Functor.hpp>
 
 #include "Var.hpp"
 
@@ -30,31 +28,31 @@ public:
     class alignas_cacheline Slot
     {
     public:
-        /** @brief Signature of the invoke helper */
-        using InvokeFunc = Var(*)(Var &data, const void * const receiver, Var *arguments);
-
         /** @brief Generation count used to know validity of a slot */
         using Generation = std::uint16_t;
 
         /** @brief Assign the slot from any functor */
         template<typename Receiver, typename Functor>
-        [[nodiscard]] Generation assign(const void * const receiver, Functor &&functor) noexcept_forward_constructible(decltype(functor));
+        [[nodiscard]] Generation assign(const void * const receiver, Functor &&functor, const std::uint32_t sharedCount) noexcept_forward_constructible(decltype(functor));
 
         /** @brief Release the slot */
+        template<bool HasOwnership>
         [[nodiscard]] bool release(const Generation generation);
 
         /** @brief Checks if the slot can be safely invoked with a given generation */
         [[nodiscard]] bool isInvokable(const Generation generation) const noexcept { return _generation == generation; }
 
         /** @brief Invoke the opaque functor */
-        [[nodiscard]] Var invoke(const Generation generation, Var *arguments);
+        [[nodiscard]] bool invoke(const Generation generation, Var *arguments);
 
     private:
-        Var _data {};
+        Core::Functor<bool(const void * const, Var *), Core::CacheLineHalfSize> _functor {};
         const void *_receiver { nullptr };
-        InvokeFunc _invokeFunc { nullptr };
-        Generation _generation { 0 };
+        Generation _generation { 0u };
+        std::uint32_t _sharedCount { 0u };
     };
+
+    static_assert_fit_cacheline(Slot);
 
     /** @brief Determine the page size of the connection table */
     static constexpr std::size_t PageSize = KUBE_META_CONNECTION_TABLE_PAGE_SIZE / sizeof(Slot);
@@ -66,7 +64,7 @@ public:
     {
     public:
         /** @brief Array containing all slots */
-        using Array = std::array<Slot, PageSize>;
+        using Array = Slot[PageSize];
 
         /** @brief Index of a slot in a page */
         using Index = std::uint16_t;
@@ -75,29 +73,30 @@ public:
         using IndexAndGeneration = std::uint32_t;
 
         /** @brief Construct a new page */
-        Page(void) noexcept : _data(std::make_unique<Array>()) {}
+        Page(void) noexcept : _data(new (std::nothrow) Array) {}
 
         /** @brief Move constructor */
         Page(Page &&other) noexcept = default;
 
         /** @brief Destruct the page */
-        ~Page(void) noexcept_destructible(Array) = default;
+        ~Page(void) noexcept_destructible(Slot) = default;
 
         /** @brief Move assignment */
         Page &operator=(Page &&other) noexcept = default;
 
         /** @brief Check if the queue has enough space to receive another slot */
-        [[nodiscard]] bool isInsertable(void) const noexcept { return _sizeLeft || _freeCount; }
+        [[nodiscard]] bool isInsertable(void) const noexcept { return _sizeLeft || !_freeList.empty(); }
 
         /** @brief Insert a new slot into the page */
         template<typename Receiver, typename Functor>
-        [[nodiscard]] IndexAndGeneration insert(const void *receiver, Functor &&functor) noexcept_forward_constructible(decltype(functor));
+        [[nodiscard]] IndexAndGeneration insert(const void *receiver, Functor &&functor, const std::uint32_t sharedCount) noexcept_forward_constructible(decltype(functor));
 
         /** @brief Remove a slot from the page */
+        template<bool HasOwnership>
         void remove(const IndexAndGeneration indexAndGeneration);
 
         /** @brief Invoke a slot */
-        [[nodiscard]] Var invoke(const IndexAndGeneration indexAndGeneration, Var *arguments);
+        [[nodiscard]] bool invoke(const IndexAndGeneration indexAndGeneration, Var *arguments);
 
         /** @brief Pack an index and a generation */
         [[nodiscard]] static IndexAndGeneration PackIndexAndGeneration(const Index index, const Slot::Generation generation) noexcept
@@ -112,10 +111,9 @@ public:
             { return static_cast<Slot::Generation>(indexAndGeneration & (0xFFFF)); }
 
     private:
-        std::unique_ptr<Array> _data {};
+        std::unique_ptr<Slot[]> _data {};
         std::size_t _sizeLeft { PageSize };
-        std::size_t _freeCount { 0 };
-        Core::FlatVector<Index> _freeList;
+        Core::TinyVector<Index> _freeList {};
     };
 
     static_assert_fit_half_cacheline(Page);
@@ -134,18 +132,19 @@ public:
 
     /** @brief Insert a slot in the table (Receiver type must be set to void if no receiver is passed) */
     template<typename Receiver, typename Functor>
-    [[nodiscard]] OpaqueIndex insert(const void * const receiver, Functor &&functor) noexcept_forward_constructible(decltype(functor));
+    [[nodiscard]] OpaqueIndex insert(const void * const receiver, Functor &&functor, const std::uint32_t sharedCount) noexcept_forward_constructible(decltype(functor));
 
     /** @brief Helper to insert non member slots */
     template<typename Functor>
-    [[nodiscard]] OpaqueIndex insert(Functor &&functor) noexcept_forward_constructible(decltype(functor))
-        { return insert<void>(nullptr, std::forward<Functor>(functor)); }
+    [[nodiscard]] OpaqueIndex insert(Functor &&functor, const std::uint32_t sharedCount) noexcept_forward_constructible(decltype(functor))
+        { return insert<void>(nullptr, std::forward<Functor>(functor), sharedCount); }
 
     /** @brief Remove a slot from the table */
+    template<bool HasOwnership>
     void remove(const OpaqueIndex opaqueIndex);
 
     /** @brief Invoke a slot */
-    [[nodiscard]] Var invoke(const OpaqueIndex opaqueIndex, Var *arguments);
+    [[nodiscard]] bool invoke(const OpaqueIndex opaqueIndex, Var *arguments);
 
     [[nodiscard]] static OpaqueIndex PackOpaqueIndex(const PageIndex pageIndex, const Page::IndexAndGeneration indexAndGeneration) noexcept
         { return (static_cast<OpaqueIndex>(pageIndex) << (sizeof(PageIndex) * 8)) | indexAndGeneration; }
@@ -159,7 +158,7 @@ public:
         { return static_cast<Page::IndexAndGeneration>(opaqueIndex & (0xFFFFFFFF)); }
 
 private:
-    std::vector<Page> _pages {};
+    Core::Vector<Page> _pages {};
     PageIndex _lastAvailablePage { 0 };
 };
 

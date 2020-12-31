@@ -20,11 +20,11 @@ public:
 
 
     /** @brief Register templated type's hashed name */
-    static void Register(const HashedName name) noexcept_ndebug
-        { Register(name, name); }
+    static void Register(const HashedName name, const std::string_view &literal = std::string_view()) noexcept_ndebug
+        { Register(name, name, literal); }
 
     /** @brief Register templated type's hashed name with a specialization */
-    static void Register(const HashedName name, const HashedName specialization) noexcept_ndebug;
+    static void Register(const HashedName name, const HashedName specialization, const std::string_view &literal = std::string_view()) noexcept_ndebug;
 
     /** @brief Register a base of templated type */
     template<typename Base>
@@ -65,24 +65,24 @@ public:
     FactoryBase(void) noexcept = default;
 
     /** @brief Alias of Register function */
-    FactoryBase(const HashedName name)
-        { Register(name); }
+    FactoryBase(const HashedName name, const std::string_view &literal = std::string_view())
+        { Register(name, literal); }
 
     /** @brief Alias of Register specialization function */
-    FactoryBase(const HashedName name, const HashedName specialization)
-        { Register(name, specialization); }
+    FactoryBase(const HashedName name, const HashedName specialization, const std::string_view &literal = std::string_view())
+        { Register(name, specialization, literal); }
 
     /** @brief Destructor */
     ~FactoryBase(void) noexcept = default;
 
 
     /** @brief Alias of Register function */
-    FactoryBase &metaRegister(const HashedName name) noexcept_ndebug
-        { Register(name); return *this; }
+    FactoryBase &metaRegister(const HashedName name, const std::string_view &literal = std::string_view()) noexcept_ndebug
+        { Register(name, literal); return *this; }
 
     /** @brief Alias of Register specialization function */
-    FactoryBase &metaRegister(const HashedName name, const HashedName specialization) noexcept_ndebug
-        { Register(name, specialization); return *this; }
+    FactoryBase &metaRegister(const HashedName name, const HashedName specialization, const std::string_view &literal = std::string_view()) noexcept_ndebug
+        { Register(name, specialization, literal); return *this; }
 
 
     /** @brief Alias of RegisterBase function */

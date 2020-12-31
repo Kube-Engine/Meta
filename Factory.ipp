@@ -4,11 +4,13 @@
  */
 
 template<typename RegisteredType>
-inline void kF::Meta::FactoryBase<RegisteredType>::Register(const HashedName name, const HashedName specialization) noexcept_ndebug
+inline void kF::Meta::FactoryBase<RegisteredType>::Register(const HashedName name, const HashedName specialization, const std::string_view &literal) noexcept_ndebug
 {
     kFAssert(_Descriptor.name == 0,
         throw std::logic_error("Factory::Register: Type already registered"));
     _Descriptor.name = specialization;
+    if (!literal.empty())
+        _Descriptor.literal = literal;
     if (name == specialization)
         Resolver::RegisterMetaType(Resolve());
     else

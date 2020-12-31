@@ -30,13 +30,13 @@ TEST(SlotTable, NoArguments)
     Meta::SlotTable table;
     int trigger = 0;
 
-    auto idx = table.insert([&trigger] { ++trigger; });
+    auto idx = table.insert([&trigger] { ++trigger; }, 1u);
 
     ASSERT_TRUE(table.invoke(idx, nullptr));
     ASSERT_EQ(trigger, 1);
     ASSERT_TRUE(table.invoke(idx, nullptr));
     ASSERT_EQ(trigger, 2);
-    table.remove(idx);
+    table.remove<false>(idx);
     ASSERT_FALSE(table.invoke(idx, nullptr));
     ASSERT_EQ(trigger, 2);
 }
@@ -46,7 +46,7 @@ TEST(SlotTable, Arguments)
     Meta::SlotTable table;
     int trigger = 0;
 
-    auto idx = table.insert([&trigger](int x1, int x2) { trigger += x1 - x2; });
+    auto idx = table.insert([&trigger](int x1, int x2) { trigger += x1 - x2; }, 1u);
 
     Var args1[2] { 2, 1 };
     Var args2[2] { 1, 2 };
@@ -54,7 +54,7 @@ TEST(SlotTable, Arguments)
     ASSERT_EQ(trigger, 1);
     ASSERT_TRUE(table.invoke(idx, args2));
     ASSERT_EQ(trigger, 0);
-    table.remove(idx);
+    table.remove<false>(idx);
     ASSERT_FALSE(table.invoke(idx, args2));
     ASSERT_EQ(trigger, 0);
 }
@@ -68,10 +68,10 @@ TEST(SlotTable, InsertionStress)
     int trigger = 0;
 
     for (auto i = 0u; i < count; ++i) {
-        indexes.emplace_back(table.insert([&trigger]{ ++trigger; }));
+        indexes.emplace_back(table.insert([&trigger]{ ++trigger; }, 1u));
         if (i == count / 8) {
             for (auto j = 0u; j < count / 16; ++j) {
-                table.remove(indexes.front());
+                table.remove<false>(indexes.front());
                 indexes.erase(indexes.begin());
             }
         }

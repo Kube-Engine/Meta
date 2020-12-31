@@ -53,6 +53,11 @@ kF::Meta::Type::Descriptor kF::Meta::Type::Descriptor::Construct(void) noexcept
                 |   (std::is_array_v<Type> || std::is_pointer_v<Type> ? Flags::IsPointer : Flags::NoFlags)
             );
         }(),
+        literal: Core::FlatString {},
+        destructFunc: ConstexprTernary(std::is_destructible_v<Type>,
+            &Internal::MakeDestructor<Type>,
+            nullptr
+        ),
         defaultConstructFunc: ConstexprTernary((!std::is_same_v<Type, void> && std::is_default_constructible_v<Type>),
             &Internal::MakeDefaultConstructor<Type>,
             nullptr
@@ -71,10 +76,6 @@ kF::Meta::Type::Descriptor kF::Meta::Type::Descriptor::Construct(void) noexcept
         ),
         moveAssignmentFunc: ConstexprTernary((!std::is_same_v<Type, void> && std::is_move_assignable_v<Type>),
             &Internal::MakeMoveAssignment<Type>,
-            nullptr
-        ),
-        destructFunc: ConstexprTernary(std::is_destructible_v<Type>,
-            &Internal::MakeDestructor<Type>,
             nullptr
         ),
         toBoolFunc: ConstexprTernary((std::is_convertible_v<Type, bool> || std::experimental::is_detected_v<Internal::BoolOperatorCheck, Type>),
