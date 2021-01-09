@@ -44,7 +44,8 @@ public:
         // --- Cacheline 1 ---
         /* Type description - 32 bytes */
         const TypeID typeID; // Unique type identifier
-        const std::size_t typeSize; // Size of the type
+        const std::uint32_t typeSize; // Size of the type
+        const std::uint32_t typeAlignment; // Size of the type
         HashedName name; // Hashed name of the type
         const Flags flags; // Flags that describe the type
         Core::FlatString literal; // Type literal
@@ -112,6 +113,9 @@ public:
 
     /** @brief Retreive type' size */
     [[nodiscard]] std::size_t typeSize(void) const noexcept { return _desc->typeSize; }
+
+    /** @brief Retreive type' alignment */
+    [[nodiscard]] std::size_t typeAlignment(void) const noexcept { return _desc->typeAlignment; }
 
     /** @brief Check if type is optimized */
     [[nodiscard]] bool isSmallOptimized(void) const noexcept { return _desc->flags & Flags::IsSmallOptimized; }

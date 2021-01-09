@@ -4,7 +4,7 @@
  */
 
 template<typename Receiver, typename Functor>
-inline kF::Meta::SlotTable::Slot::Generation kF::Meta::SlotTable::Slot::assign(const void * const receiver, Functor &&functor, const std::uint32_t sharedCount) noexcept_forward_constructible(decltype(functor))
+inline kF::Meta::SlotTable::Slot::Generation kF::Meta::SlotTable::Slot::assign(const void * const receiver, Functor &&functor) noexcept_forward_constructible(decltype(functor))
 {
     _functor.prepare([func = std::forward<Functor>(functor)](const void * const receiver, Var *arguments) -> bool {
         using FunctorType = std::remove_cvref_t<Functor>;
@@ -18,14 +18,12 @@ inline kF::Meta::SlotTable::Slot::Generation kF::Meta::SlotTable::Slot::assign(c
         ).operator bool();
     });
     _receiver = receiver;
-    _sharedCount = sharedCount;
     return _generation;
 }
 
-template<bool HasOwnership>
 inline bool kF::Meta::SlotTable::Slot::release(const Generation generation)
 {
-    if (_generation == generation && (HasOwnership || !--_sharedCount)) [[likely]] {
+    if (_generation == generation) [[likely]] {
         _functor.destroy();
         ++_generation;
         return true;
@@ -42,28 +40,27 @@ inline bool kF::Meta::SlotTable::Slot::invoke(const Generation generation, Var *
 }
 
 template<typename Receiver, typename Functor>
-inline kF::Meta::SlotTable::Page::IndexAndGeneration kF::Meta::SlotTable::Page::insert(const void * const receiver, Functor &&functor, const std::uint32_t sharedCount) noexcept_forward_constructible(decltype(functor))
+inline kF::Meta::SlotTable::Page::IndexAndGeneration kF::Meta::SlotTable::Page::insert(const void * const receiver, Functor &&functor) noexcept_forward_constructible(decltype(functor))
 {
     if (_sizeLeft) { // Use unasigned slots
         const Index index = PageSize - _sizeLeft;
         --_sizeLeft;
-        const auto generation = _data[index].assign<Receiver>(receiver, std::forward<Functor>(functor), sharedCount);
+        const auto generation = _data[index].assign<Receiver>(receiver, std::forward<Functor>(functor));
         return PackIndexAndGeneration(index, generation);
     } else { // Re-use free slots
         const auto index = _freeList.back();
         _freeList.pop();
-        const auto generation = _data[index].assign<Receiver>(receiver, std::forward<Functor>(functor), sharedCount);
+        const auto generation = _data[index].assign<Receiver>(receiver, std::forward<Functor>(functor));
         return PackIndexAndGeneration(index, generation);
     }
 }
 
-template<bool HasOwnership>
 inline void kF::Meta::SlotTable::Page::remove(const IndexAndGeneration indexAndGeneration)
 {
     const auto index = GetIndex(indexAndGeneration);
     const auto generation = GetGeneration(indexAndGeneration);
 
-    if (_data[index].release<HasOwnership>(generation)) [[likely]]
+    if (_data[index].release(generation)) [[likely]]
         _freeList.push(index);
 }
 
@@ -81,34 +78,33 @@ inline kF::Meta::SlotTable::SlotTable(void) noexcept
 }
 
 template<typename Receiver, typename Functor>
-inline kF::Meta::SlotTable::OpaqueIndex kF::Meta::SlotTable::insert(const void * const receiver, Functor &&functor, const std::uint32_t sharedCount) noexcept_forward_constructible(decltype(functor))
+inline kF::Meta::SlotTable::OpaqueIndex kF::Meta::SlotTable::insert(const void * const receiver, Functor &&functor) noexcept_forward_constructible(decltype(functor))
 {
-    constexpr auto Dispatch = [](Page &page, const PageIndex pageIndex, const void * const receiver, auto &&functor, const std::uint32_t sharedCount) {
-        return PackOpaqueIndex(pageIndex, page.insert<Receiver>(receiver, std::forward<Functor>(functor), sharedCount));
+    constexpr auto Dispatch = [](Page &page, const PageIndex pageIndex, const void * const receiver, auto &&functor) {
+        return PackOpaqueIndex(pageIndex, page.insert<Receiver>(receiver, std::forward<Functor>(functor)));
     };
 
     if (auto &page = _pages[_lastAvailablePage]; page.isInsertable())
-        return Dispatch(page, _lastAvailablePage, receiver, std::forward<Functor>(functor), sharedCount);
+        return Dispatch(page, _lastAvailablePage, receiver, std::forward<Functor>(functor));
     for (PageIndex pageIndex = 0u; auto &page : _pages) {
         if (!page.isInsertable())
             ++pageIndex;
         else {
             _lastAvailablePage = pageIndex;
-            return Dispatch(page, pageIndex, receiver, std::forward<Functor>(functor), sharedCount);
+            return Dispatch(page, pageIndex, receiver, std::forward<Functor>(functor));
         }
     }
     const auto pageIndex = static_cast<PageIndex>(_pages.size());
     _lastAvailablePage = pageIndex;
-    return Dispatch(_pages.push(), pageIndex, receiver, std::forward<Functor>(functor), sharedCount);
+    return Dispatch(_pages.push(), pageIndex, receiver, std::forward<Functor>(functor));
 }
 
-template<bool HasOwnership>
 inline void kF::Meta::SlotTable::remove(const OpaqueIndex opaqueIndex)
 {
     const auto pageIndex = GetPageIndex(opaqueIndex);
     const auto indexAndGeneration = GetIndexAndGeneration(opaqueIndex);
 
-    _pages.at(pageIndex).remove<HasOwnership>(indexAndGeneration);
+    _pages.at(pageIndex).remove(indexAndGeneration);
 }
 
 inline bool kF::Meta::SlotTable::invoke(const OpaqueIndex opaqueIndex, Var *arguments)

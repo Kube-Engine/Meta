@@ -8,7 +8,7 @@ inline void kF::Var::release(void)
 {
     destruct<ResetMembers>();
     if (_capacity) {
-        std::free(dataRef());
+        Core::Utils::AlignedFree(dataRef());
         if constexpr (ResetMembers == ShouldResetMembers::Yes)
             _capacity = 0u;
     }
@@ -361,8 +361,8 @@ inline void kF::Var::alloc(const std::uint32_t capacity) noexcept_ndebug
 {
     if (_capacity < capacity) [[likely]] {
         if (_capacity) [[unlikely]]
-            std::free(data<UseSmallOptimization::No>());
-        dataRef() = std::malloc(type().typeSize());
+            Core::Utils::AlignedFree(data<UseSmallOptimization::No>());
+        dataRef() = Core::Utils::AlignedAlloc(type().typeSize(), type().typeAlignment());
         _capacity = capacity;
         kFAssertFallback(data<UseSmallOptimization::No>() != nullptr,
             _capacity = 0,
@@ -376,7 +376,7 @@ inline void kF::Var::releaseAlloc(void) noexcept
 {
     if constexpr (DestructInstance == ShouldDestructInstance::Yes) {
         if (_capacity)
-            std::free(data<UseSmallOptimization::No>());
+            Core::Utils::AlignedFree(data<UseSmallOptimization::No>());
         _capacity = 0;
     }
 }

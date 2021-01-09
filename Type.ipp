@@ -42,6 +42,10 @@ kF::Meta::Type::Descriptor kF::Meta::Type::Descriptor::Construct(void) noexcept
             sizeof(Type),
             0u
         ),
+        typeAlignment: ConstexprTernary((!std::is_same_v<Type, void>),
+            alignof(Type),
+            0u
+        ),
         name: 0,
         flags: [] {
             return static_cast<Flags>(

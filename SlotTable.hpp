@@ -33,10 +33,10 @@ public:
 
         /** @brief Assign the slot from any functor */
         template<typename Receiver, typename Functor>
-        [[nodiscard]] Generation assign(const void * const receiver, Functor &&functor, const std::uint32_t sharedCount) noexcept_forward_constructible(decltype(functor));
+        [[nodiscard]] Generation assign(const void * const receiver, Functor &&functor) noexcept_forward_constructible(decltype(functor));
 
         /** @brief Release the slot */
-        template<bool HasOwnership>
+
         [[nodiscard]] bool release(const Generation generation);
 
         /** @brief Checks if the slot can be safely invoked with a given generation */
@@ -49,7 +49,6 @@ public:
         Core::Functor<bool(const void * const, Var *), Core::CacheLineHalfSize> _functor {};
         const void *_receiver { nullptr };
         Generation _generation { 0u };
-        std::uint32_t _sharedCount { 0u };
     };
 
     static_assert_fit_cacheline(Slot);
@@ -89,10 +88,10 @@ public:
 
         /** @brief Insert a new slot into the page */
         template<typename Receiver, typename Functor>
-        [[nodiscard]] IndexAndGeneration insert(const void *receiver, Functor &&functor, const std::uint32_t sharedCount) noexcept_forward_constructible(decltype(functor));
+        [[nodiscard]] IndexAndGeneration insert(const void *receiver, Functor &&functor) noexcept_forward_constructible(decltype(functor));
 
         /** @brief Remove a slot from the page */
-        template<bool HasOwnership>
+
         void remove(const IndexAndGeneration indexAndGeneration);
 
         /** @brief Invoke a slot */
@@ -132,15 +131,14 @@ public:
 
     /** @brief Insert a slot in the table (Receiver type must be set to void if no receiver is passed) */
     template<typename Receiver, typename Functor>
-    [[nodiscard]] OpaqueIndex insert(const void * const receiver, Functor &&functor, const std::uint32_t sharedCount) noexcept_forward_constructible(decltype(functor));
+    [[nodiscard]] OpaqueIndex insert(const void * const receiver, Functor &&functor) noexcept_forward_constructible(decltype(functor));
 
     /** @brief Helper to insert non member slots */
     template<typename Functor>
-    [[nodiscard]] OpaqueIndex insert(Functor &&functor, const std::uint32_t sharedCount) noexcept_forward_constructible(decltype(functor))
-        { return insert<void>(nullptr, std::forward<Functor>(functor), sharedCount); }
+    [[nodiscard]] OpaqueIndex insert(Functor &&functor) noexcept_forward_constructible(decltype(functor))
+        { return insert<void>(nullptr, std::forward<Functor>(functor)); }
 
     /** @brief Remove a slot from the table */
-    template<bool HasOwnership>
     void remove(const OpaqueIndex opaqueIndex);
 
     /** @brief Invoke a slot */
