@@ -18,10 +18,16 @@ struct IsStaticCastable<From, To, decltype(static_cast<To>(std::declval<From>())
 
 #define RegisterConverterHelper(From, To) \
     if constexpr (!std::is_same_v<From, To> && IsStaticCastable<From, To>()) \
-        kF::Meta::Factory<From>::RegisterConverter<To>(); \
+        kF::Meta::Factory<From>::RegisterConverter<To>();
+
+#ifdef KUBE_LOG_META_REGISTERS
+# define _KUBE_INTERNAL_REGISTER_BASE_TYPE_LOG(Alias) std::cout << "[ Registering base meta-type '" << Alias << "' ]" << std::endl;
+#else
+# define _KUBE_INTERNAL_REGISTER_BASE_TYPE_LOG(Alias)
+#endif
 
 #define RegisterType(Type, Alias) \
-    std::cout << "[ Registering base meta-type '" << Alias << "' ]" << std::endl; \
+    _KUBE_INTERNAL_REGISTER_BASE_TYPE_LOG(Alias) \
     kF::Meta::Factory<Type>::Register(Hash(Alias), Alias); \
     RegisterConverterHelper(Type, bool); \
     RegisterConverterHelper(Type, std::int8_t); \
@@ -34,6 +40,7 @@ struct IsStaticCastable<From, To, decltype(static_cast<To>(std::declval<From>())
     RegisterConverterHelper(Type, std::uint64_t); \
     RegisterConverterHelper(Type, float); \
     RegisterConverterHelper(Type, double);
+
 
 void Meta::RegisterMetadata(void)
 {
