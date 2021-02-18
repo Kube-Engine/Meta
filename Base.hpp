@@ -189,9 +189,9 @@ namespace kF
 
             /** @brief Helpers used to generate opaque operators functions */
             template<typename Type, auto OperatorFunc, UnaryOperator Operator>
-            Var MakeUnaryOperator(const void *data);
+            [[nodiscard]] Var MakeUnaryOperator(const void *data);
             template<typename Type, auto OperatorFunc, BinaryOperator Operator>
-            Var MakeBinaryOperator(const void *data, const Var &var);
+            [[nodiscard]] Var MakeBinaryOperator(const void *data, const Var &var);
             template<typename Type, auto OperatorFunc, AssignmentOperator Operator>
             void MakeAssignmentOperator(void *data, const Var &var);
 

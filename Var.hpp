@@ -240,6 +240,8 @@ private:
     /** @brief Release the current allocation if there is any */
     template<ShouldDestructInstance DestructInstance>
     void releaseAlloc(void) noexcept;
+
+    [[nodiscard]] static std::string TypeToString(const Meta::Type type) noexcept;
 };
 
 static_assert(sizeof(kF::Var) - kF::Meta::Internal::VarSmallOptimizationSize == kF::Core::CacheLineQuarterSize, "Var data must take the qurater of a cacheline");

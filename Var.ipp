@@ -170,7 +170,8 @@ template<typename Type>
 inline Type &kF::Var::cast(void) noexcept_ndebug
 {
     kFAssert(isCastAble<Type>(),
-        throw std::runtime_error("Var::cast: Invalid cast"));
+        throw std::runtime_error("Var::cast: Invalid cast from type '" + TypeToString(type())
+                + "' to '" + TypeToString(Meta::Factory<Type>::Resolve())));
     return as<Type>();
 }
 
@@ -178,7 +179,8 @@ template<typename Type>
 inline const Type &kF::Var::cast(void) const noexcept_ndebug
 {
     kFAssert(isCastAble<Type>(),
-        throw std::runtime_error("Var::cast: Invalid cast"));
+        throw std::runtime_error("Var::cast: Invalid cast from type '" + TypeToString(type())
+                + "' to '" + TypeToString(Meta::Factory<Type>::Resolve())));
     return as<Type>();
 }
 
@@ -224,7 +226,8 @@ inline To kF::Var::convertExplicit(void) const
     auto conv = type().findConverter(ty);
 
     kFAssert(conv,
-        throw std::runtime_error("Var::convertExplicit: Type not convertible"));
+        throw std::runtime_error("Var::convertExplicit: Type '" + TypeToString(type())
+                + "' is not convertible to '" + TypeToString(ty) + '\''));
     To to;
     conv.invoke(data(), &to);
     return to;
@@ -233,49 +236,49 @@ inline To kF::Var::convertExplicit(void) const
 inline bool kF::Var::toBool(void) const
 {
     kFAssert(type().isBoolConvertible(),
-        throw std::logic_error("Var::toBool: Boolean operator doesn't exists"));
+        throw std::logic_error("Var::toBool: Boolean operator is not supported by type '" + TypeToString(type()) + '\''));
     return type().toBool(data());
 }
 
 inline kF::Var kF::Var::operator+(const Var &rhs) const
 {
     kFAssert(type().hasOperator<Meta::BinaryOperator::Addition>(),
-        throw std::logic_error("Var::operator+: Addition operator doesn't exists"));
+        throw std::logic_error("Var::operator+: Addition operator is not supported by type '" + TypeToString(type()) + '\''));
     return type().invokeOperator<Meta::BinaryOperator::Addition>(data(), rhs);
 }
 
 inline kF::Var kF::Var::operator-(const Var &rhs) const
 {
     kFAssert(type().hasOperator<Meta::BinaryOperator::Substraction>(),
-        throw std::logic_error("Var::operator-: Substraction operator doesn't exists"));
+        throw std::logic_error("Var::operator-: Substraction operator is not supported by type '" + TypeToString(type()) + '\''));
     return type().invokeOperator<Meta::BinaryOperator::Substraction>(data(), rhs);
 }
 
 inline kF::Var kF::Var::operator*(const Var &rhs) const
 {
     kFAssert(type().hasOperator<Meta::BinaryOperator::Multiplication>(),
-        throw std::logic_error("Var::operator*: Multiplication operator doesn't exists"));
+        throw std::logic_error("Var::operator*: Multiplication operator is not supported by type '" + TypeToString(type()) + '\''));
     return type().invokeOperator<Meta::BinaryOperator::Multiplication>(data(), rhs);
 }
 
 inline kF::Var kF::Var::operator/(const Var &rhs) const
 {
     kFAssert(type().hasOperator<Meta::BinaryOperator::Division>(),
-        throw std::logic_error("Var::operator/: Division operator doesn't exists"));
+        throw std::logic_error("Var::operator/: Division operator is not supported by type '" + TypeToString(type()) + '\''));
     return type().invokeOperator<Meta::BinaryOperator::Division>(data(), rhs);
 }
 
 inline kF::Var kF::Var::operator%(const Var &rhs) const
 {
     kFAssert(type().hasOperator<Meta::BinaryOperator::Modulo>(),
-        throw std::logic_error("Var::operator%: Modulo operator doesn't exists"));
+        throw std::logic_error("Var::operator%: Modulo operator is not supported by type '" + TypeToString(type()) + '\''));
     return type().invokeOperator<Meta::BinaryOperator::Modulo>(data(), rhs);
 }
 
 inline kF::Var &kF::Var::operator+=(const Var &rhs)
 {
     kFAssert(type().hasOperator<Meta::AssignmentOperator::Addition>(),
-        throw std::logic_error("Var::operator+=: Addition operator doesn't exists"));
+        throw std::logic_error("Var::operator+=: Addition operator is not supported by type '" + TypeToString(type()) + '\''));
     type().invokeOperator<Meta::AssignmentOperator::Addition>(data(), rhs);
     return *this;
 }
@@ -283,7 +286,7 @@ inline kF::Var &kF::Var::operator+=(const Var &rhs)
 inline kF::Var &kF::Var::operator-=(const Var &rhs)
 {
     kFAssert(type().hasOperator<Meta::AssignmentOperator::Substraction>(),
-        throw std::logic_error("Var::operator-=: Substraction operator doesn't exists"));
+        throw std::logic_error("Var::operator-=: Substraction operator is not supported by type '" + TypeToString(type()) + '\''));
     type().invokeOperator<Meta::AssignmentOperator::Substraction>(data(), rhs);
     return *this;
 }
@@ -291,7 +294,7 @@ inline kF::Var &kF::Var::operator-=(const Var &rhs)
 inline kF::Var &kF::Var::operator*=(const Var &rhs)
 {
     kFAssert(type().hasOperator<Meta::AssignmentOperator::Multiplication>(),
-        throw std::logic_error("Var::operator*=: Multiplication operator doesn't exists"));
+        throw std::logic_error("Var::operator*=: Multiplication operator is not supported by type '" + TypeToString(type()) + '\''));
     type().invokeOperator<Meta::AssignmentOperator::Multiplication>(data(), rhs);
     return *this;
 }
@@ -299,7 +302,7 @@ inline kF::Var &kF::Var::operator*=(const Var &rhs)
 inline kF::Var &kF::Var::operator/=(const Var &rhs)
 {
     kFAssert(type().hasOperator<Meta::AssignmentOperator::Division>(),
-        throw std::logic_error("Var::operator/=: Division operator doesn't exists"));
+        throw std::logic_error("Var::operator/=: Division operator is not supported by type '" + TypeToString(type()) + '\''));
     type().invokeOperator<Meta::AssignmentOperator::Division>(data(), rhs);
     return *this;
 }
@@ -307,7 +310,7 @@ inline kF::Var &kF::Var::operator/=(const Var &rhs)
 inline kF::Var &kF::Var::operator%=(const Var &rhs)
 {
     kFAssert(type().hasOperator<Meta::AssignmentOperator::Modulo>(),
-        throw std::logic_error("Var::operator%=: Modulo operator doesn't exists"));
+        throw std::logic_error("Var::operator%=: Modulo operator is not supported by type '" + TypeToString(type()) + '\''));
     type().invokeOperator<Meta::AssignmentOperator::Modulo>(data(), rhs);
     return *this;
 }
@@ -379,4 +382,15 @@ inline void kF::Var::releaseAlloc(void) noexcept
             Core::Utils::AlignedFree(data<UseSmallOptimization::No>());
         _capacity = 0;
     }
+}
+
+inline std::string kF::Var::TypeToString(const Meta::Type type) noexcept
+{
+    if (!type) [[unlikely]]
+        return "null";
+    const auto literal = type.literal();
+    if (!literal.empty()) [[likely]] {
+        return std::string(literal);
+    } else [[unlikely]]
+        return std::string("unknown");
 }
