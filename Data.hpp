@@ -5,6 +5,8 @@
 
 #pragma once
 
+#include <Kube/Core/TrivialFunctor.hpp>
+
 #include "Type.hpp"
 #include "Signal.hpp"
 
@@ -14,24 +16,23 @@
 class kF::Meta::Data
 {
 public:
-    using GetFunc = Var(*)(const void *);
-    using SetCopyFunc = Var(*)(const void *, const Var &);
-    using SetMoveFunc = Var(*)(const void *, Var &&);
+    using GetFunc = Core::TrivialFunctor<Var(const void *)>;
+    using SetCopyFunc = Core::TrivialFunctor<Var(const void *, const Var &)>;
+    using SetMoveFunc = Core::TrivialFunctor<Var(const void *, Var &&)>;
 
     /** @brief Describe a meta data */
     struct alignas_cacheline Descriptor
     {
-        const HashedName name;
-        const bool isStatic : 4;
-        const Type type;
-        const GetFunc getFunc;
-        const SetCopyFunc setCopyFunc;
-        const SetMoveFunc setMoveFunc;
-        const Signal signal;
+        const HashedName name {};
+        const bool isStatic {};
+        const Type type {};
+        const GetFunc getFunc {};
+        const SetCopyFunc setCopyFunc {};
+        const SetMoveFunc setMoveFunc {};
 
         /** @brief Construct a Descriptor */
         template<typename Type, auto GetFunctionPtr, auto SetCopyFunctionPtr, auto SetMoveFunctionPtr>
-        [[nodiscard]] static Descriptor Construct(const HashedName name, const Signal signal) noexcept;
+        [[nodiscard]] static Descriptor Construct(const HashedName name) noexcept;
     };
 
     static_assert_fit_cacheline(Descriptor);
@@ -71,13 +72,10 @@ public:
     /** @brief Get underlying data type */
     [[nodiscard]] Type type(void) const noexcept { return _desc->type; }
 
-    /** @brief Get underlying signal */
-    [[nodiscard]] Signal signal(void) const noexcept { return _desc->signal; }
-
 
     /** @brief Get the underlying instance */
-    [[nodiscard]] Var get(const Var &instance) const { return (*_desc->getFunc)(instance.data()); }
-    [[nodiscard]] Var get(const void *instance = nullptr) const { return (*_desc->getFunc)(instance); }
+    [[nodiscard]] Var get(const Var &instance) const { return _desc->getFunc(instance.data()); }
+    [[nodiscard]] Var get(const void *instance = nullptr) const { return _desc->getFunc(instance); }
 
     /** @brief Call member setter using a opaque variable */
     template<typename Type>

@@ -31,7 +31,7 @@ public:
     static_assert_fit_quarter_cacheline(Descriptor);
 
     /** @brief Construct passing a descriptor instance */
-    Signal(Descriptor *desc = nullptr) noexcept : _desc(desc) {}
+    Signal(const Descriptor *desc = nullptr) noexcept : _desc(desc) {}
 
     /** @brief Copy constructor */
     Signal(const Signal &other) noexcept = default;
@@ -59,7 +59,7 @@ public:
     [[nodiscard]] static SlotTable &GetSlotTable(void) { return _SlotTable; }
 
 private:
-    Descriptor *_desc = nullptr;
+    const Descriptor *_desc = nullptr;
 
     static inline SlotTable _SlotTable {};
 };

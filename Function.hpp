@@ -13,24 +13,24 @@
 class kF::Meta::Function
 {
 public:
-    using InvokeFunc = Var(*)(const void *, Var *);
+    using InvokeFunc = Core::TrivialFunctor<Var(const void *, Var *), Core::CacheLineEighthSize * 3>;
     using ArgTypeFunc = Type(*)(const std::size_t) noexcept;
 
-    struct alignas_half_cacheline Descriptor
+    struct alignas_cacheline Descriptor
     {
-        const HashedName name;
-        const std::uint16_t argsCount;
-        const bool isStatic;
-        const bool isConst;
-        const Type returnType;
-        const ArgTypeFunc argTypeFunc;
-        const InvokeFunc invokeFunc;
+        const HashedName name { 0u };
+        const bool isStatic { false };
+        const bool isConst { false };
+        const std::size_t argsCount { 0u };
+        const Type returnType {};
+        const ArgTypeFunc argTypeFunc { nullptr };
+        const InvokeFunc invokeFunc {};
 
         template<typename Type, auto FunctionPtr>
         [[nodiscard]] static Descriptor Construct(const HashedName name) noexcept;
     };
 
-    static_assert_fit_half_cacheline(Descriptor);
+    static_assert_fit_cacheline(Descriptor);
 
     /** @brief Construct passing a descriptor instance */
     Function(const Descriptor *desc = nullptr) noexcept : _desc(desc) {}

@@ -72,8 +72,8 @@ inline kF::Meta::Function kF::Meta::FactoryBase<RegisteredType>::RegisterFunctio
 }
 
 template<typename RegisteredType>
-template<auto GetFunctionPtr, auto SetFunctionPtr, auto SignalPtr>
-inline kF::Meta::Data kF::Meta::FactoryBase<RegisteredType>::RegisterData(const HashedName name, const HashedName signalName) noexcept_ndebug
+template<auto GetFunctionPtr, auto SetFunctionPtr>
+inline kF::Meta::Data kF::Meta::FactoryBase<RegisteredType>::RegisterData(const HashedName name) noexcept_ndebug
 {
     using SetDecomposer = Internal::FunctionDecomposerHelper<decltype(SetFunctionPtr)>;
 
@@ -96,14 +96,14 @@ inline kF::Meta::Data kF::Meta::FactoryBase<RegisteredType>::RegisterData(const 
         return SetFunctionPtr;
     }();
 
-    return RegisterData<GetFunctionPtr, SetCopyFunctionPtr, SetMoveFunctionPtr, SignalPtr>(name, signalName);
+    return RegisterData<GetFunctionPtr, SetCopyFunctionPtr, SetMoveFunctionPtr>(name, signalName);
 }
 
 template<typename RegisteredType>
-template<auto GetFunctionPtr, auto SetCopyFunctionPtr, auto SetMoveFunctionPtr, auto SignalPtr>
-inline kF::Meta::Data kF::Meta::FactoryBase<RegisteredType>::RegisterData(const HashedName name, const HashedName signalName) noexcept_ndebug
+template<auto GetFunctionPtr, auto SetCopyFunctionPtr, auto SetMoveFunctionPtr>
+inline kF::Meta::Data kF::Meta::FactoryBase<RegisteredType>::RegisterData(const HashedName name) noexcept_ndebug
 {
-    using FunctionIdentifier = Internal::FunctionIdentifier<FactoryBase<RegisteredType>::RegisterData<GetFunctionPtr, SetCopyFunctionPtr, SetMoveFunctionPtr, SignalPtr>>;
+    using FunctionIdentifier = Internal::FunctionIdentifier<FactoryBase<RegisteredType>::RegisterData<GetFunctionPtr, SetCopyFunctionPtr, SetMoveFunctionPtr>>;
     using DescriptorInstance = Internal::DescriptorInstance<Data::Descriptor, FunctionIdentifier>;
 
     auto &descriptor = DescriptorInstance::Initialize(
@@ -112,12 +112,7 @@ inline kF::Meta::Data kF::Meta::FactoryBase<RegisteredType>::RegisterData(const 
             GetFunctionPtr,
             SetCopyFunctionPtr,
             SetMoveFunctionPtr
-        >(name, [signalName] {
-            if constexpr (SignalPtr)
-                return RegisterSignal<SignalPtr>(signalName);
-            else
-                return Signal();
-        }())
+        >(name)
     );
 
     kFAssert(!Resolve().findData(name),

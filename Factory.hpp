@@ -43,12 +43,12 @@ public:
     static Function RegisterFunction(const HashedName name) noexcept_ndebug;
 
     /** @brief Register a data of templated type with a single setter */
-    template<auto GetFunctionPtr, auto SetFunctionPtr, auto SignalPtr = nullptr>
-    static Data RegisterData(const HashedName name, const HashedName signalName = 0u) noexcept_ndebug;
+    template<auto GetFunctionPtr, auto SetFunctionPtr>
+    static Data RegisterData(const HashedName name) noexcept_ndebug;
 
     /** @brief Register a data of templated type with a copy and a move setter */
-    template<auto GetFunctionPtr, auto SetCopyFunctionPtr, auto SetMoveFunctionPtr, auto SignalPtr>
-    static Data RegisterData(const HashedName name, const HashedName signalName = 0u) noexcept_ndebug;
+    template<auto GetFunctionPtr, auto SetCopyFunctionPtr, auto SetMoveFunctionPtr>
+    static Data RegisterData(const HashedName name) noexcept_ndebug;
 
     /**
      * @brief Register a signal of templated type
@@ -106,14 +106,14 @@ public:
         { RegisterFunction<FunctionPtr>(name); return *this; }
 
     /** @brief Alias of RegisterData function */
-    template<auto GetFunctionPtr, auto SetFunctionPtr, auto SignalPtr = nullptr>
-    FactoryBase &data(const HashedName name, const HashedName signalName = 0u) noexcept_ndebug
-        { RegisterData<GetFunctionPtr, SetFunctionPtr, SignalPtr>(name, signalName); return *this; }
+    template<auto GetFunctionPtr, auto SetFunctionPtr>
+    FactoryBase &data(const HashedName name) noexcept_ndebug
+        { RegisterData<GetFunctionPtr, SetFunctionPtr>(name); return *this; }
 
     /** @brief Alias of RegisterData function */
-    template<auto GetFunctionPtr, auto SetCopyFunctionPtr, auto SetMoveFunctionPtr, auto SignalPtr>
-    FactoryBase &data(const HashedName name, const HashedName signalName = 0u) noexcept_ndebug
-        { RegisterData<GetFunctionPtr, SetCopyFunctionPtr, SetMoveFunctionPtr, SignalPtr>(name, signalName); return *this; }
+    template<auto GetFunctionPtr, auto SetCopyFunctionPtr, auto SetMoveFunctionPtr>
+    FactoryBase &data(const HashedName name) noexcept_ndebug
+        { RegisterData<GetFunctionPtr, SetCopyFunctionPtr, SetMoveFunctionPtr>(name); return *this; }
 
     /** @brief Alias of RegisterSignal function */
     template<auto SignalPtr>

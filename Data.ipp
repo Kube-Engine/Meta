@@ -4,7 +4,7 @@
  */
 
 template<typename Type, auto GetFunctionPtr, auto SetCopyFunctionPtr, auto SetMoveFunctionPtr>
-inline kF::Meta::Data::Descriptor kF::Meta::Data::Descriptor::Construct(const HashedName name, const Signal signal) noexcept
+inline kF::Meta::Data::Descriptor kF::Meta::Data::Descriptor::Construct(const HashedName name) noexcept
 {
     using GetFunctionType = decltype(GetFunctionPtr);
     using GetDecomposer = Internal::FunctionDecomposerHelper<GetFunctionType>;
@@ -55,8 +55,7 @@ inline kF::Meta::Data::Descriptor kF::Meta::Data::Descriptor::Construct(const Ha
                 return Internal::Invoke<Type, SetMoveFunctionPtr, true, SetMoveDecomposer>(instance, &value, SetMoveDecomposer::IndexSequence);
             }),
             nullptr
-        ),
-        signal: signal
+        )
     };
 }
 
@@ -76,14 +75,14 @@ inline kF::Var kF::Meta::Data::set(const void *instance, Type &&value) const
     if constexpr (std::is_same_v<std::remove_cvref_t<Type>, Var>) {
         if constexpr (IsRValue) {
             if (isMoveSettable()) [[likely]]
-                return (*_desc->setMoveFunc)(instance, std::move(value));
+                return _desc->setMoveFunc(instance, std::move(value));
         }
-        return (*_desc->setCopyFunc)(instance, value);
+        return _desc->setCopyFunc(instance, value);
     } else {
         if constexpr (IsRValue) {
             if (isMoveSettable()) [[likely]]
-                return (*_desc->setMoveFunc)(instance, kF::Var::Assign(std::forward<Type>(value)));
+                return _desc->setMoveFunc(instance, kF::Var::Assign(std::forward<Type>(value)));
         }
-        return (*_desc->setCopyFunc)(instance, kF::Var::Assign(std::forward<Type>(value)));
+        return _desc->setCopyFunc(instance, kF::Var::Assign(std::forward<Type>(value)));
     }
 }

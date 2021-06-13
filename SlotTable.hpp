@@ -36,7 +36,6 @@ public:
         [[nodiscard]] Generation assign(const void * const receiver, Functor &&functor) noexcept_forward_constructible(decltype(functor));
 
         /** @brief Release the slot */
-
         [[nodiscard]] bool release(const Generation generation);
 
         /** @brief Checks if the slot can be safely invoked with a given generation */
@@ -91,7 +90,6 @@ public:
         [[nodiscard]] IndexAndGeneration insert(const void *receiver, Functor &&functor) noexcept_forward_constructible(decltype(functor));
 
         /** @brief Remove a slot from the page */
-
         void remove(const IndexAndGeneration indexAndGeneration);
 
         /** @brief Invoke a slot */
